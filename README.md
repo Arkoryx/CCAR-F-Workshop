@@ -71,9 +71,18 @@ Work through the modules in order. Each one builds on the last — module 04's a
 module 03's MCP server using module 02's prompts, inside module 01's Claude Code setup.
 
 - **`app/`** is where *you* build the Coach. It starts near-empty by design.
-- **`solutions/`** holds a reference implementation per module. Use it when you're stuck,
-  or to diff against what you wrote. Don't read ahead — building it wrong first and then
-  comparing is most of the learning.
+- **The `solutions` branch** holds a working reference implementation — the same
+  `app/coach/` you're about to write, with every verifier passing against it. It is a
+  *branch*, not a folder, so it isn't sitting in your working tree tempting you. Reach
+  for it when you're stuck:
+
+  ```bash
+  git show solutions:app/coach/schema.py     # read one file
+  git diff main solutions -- app/coach       # everything at once
+  git checkout solutions -- app/coach/exam.py  # pull one file into your tree
+  ```
+
+  Building it wrong first and then comparing is most of the learning.
 - **Drill questions** at the end of each module are in exam format. Answer them before
   looking at the key.
 
@@ -130,7 +139,19 @@ assembled, because you and it share blind spots.
 ## Status
 
 All seven modules (00–06) written, each with an executable verifier in `app/verify/`.
-`solutions/` is not yet populated.
+A full reference implementation lives on the `solutions` branch, and **all six verifiers
+pass against it** (17/17, 12/12, 13/13, 13/13, 13/13, 13/13), along with `pytest` and
+`ruff`. Every build step in these modules has been executed, not just written.
+
+**What is not yet verified — read this before trusting a module end to end:**
+
+| Unverified | Why it matters |
+|---|---|
+| **Drill answer keys** — ~50 questions, none checked against sources | This is the workshop's highest-risk surface *by its own argument*: a wrong build step breaks your code in minutes; a wrong answer key just teaches you the wrong thing, silently. |
+| **Every `--live` check** — no API call has ever been made | Module 05's whole claim (caching works) rests on `cache_read_input_tokens > 0`, which only a live run can show. The offline checks prove the code is *shaped* right, not that it *works*. |
+| **The MCP server has never been started** | Module 03's checkpoint says "one server, both consumers." The logic is tested; the stdio transport and Claude Code's connection to it are not. |
+| **The agent has never run a batch** | Module 04's guardrails are tested directly; the loop they guard has not executed. |
+| **Blueprint weightings** | Third-party sources, not Anthropic. See the caveat in `references/exam-blueprint.md`. |
 
 The exam blueprint is corroborated by two independent third-party sources but is **not**
 from Anthropic directly — see the caveat in

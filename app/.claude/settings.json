@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(pytest *)",
+      "Bash(ruff *)",
+      "Bash(python -m coach *)",
+      "Read(./corpus/**)",
+      "Write(./coach/**)",
+      "Write(./tests/**)"
+    ],
+    "ask": [
+      "Bash(pip install *)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Write(./corpus/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python ${CLAUDE_PROJECT_DIR}/.claude/hooks/protect_corpus.py",
+            "statusMessage": "Checking corpus protection..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ruff format ${CLAUDE_PROJECT_DIR}",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

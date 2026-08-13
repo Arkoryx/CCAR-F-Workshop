@@ -1,0 +1,13 @@
+{
+  "domain": "claude_code_config",
+  "stem": "Which settings scope has the LOWEST precedence?",
+  "choices": [
+    {"label": "A", "text": "Managed policy settings"},
+    {"label": "B", "text": "Project settings (.claude/settings.json)"},
+    {"label": "C", "text": "User settings (~/.claude/settings.json)"},
+    {"label": "D", "text": "Local settings (.claude/settings.local.json)"}
+  ],
+  "correct_labels": ["C"],
+  "explanation": "Precedence runs Managed > CLI args > Local > Project > User. User settings are lowest, which inverts most people's intuition. A is highest, D and B sit between.",
+  "source": "https://code.claude.com/docs/en/settings"
+}

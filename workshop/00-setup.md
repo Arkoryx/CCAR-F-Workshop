@@ -153,7 +153,19 @@ requires-python = ">=3.11"
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
+# Pin the rule set explicitly. Ruff's default selection changes between
+# releases, so an unpinned config means `pip install ruff` in CI can turn a
+# green build red without anyone touching the code.
+select = ["E4", "E7", "E9", "F", "I"]
 ```
+
+That `select` line is not boilerplate. Module 01 has you write a CI workflow that runs
+`ruff check .`, and module 01's `PostToolUse` hook runs `ruff format` on every save — so
+the linter's opinion is wired into two places before you've written any application code.
+Leaving the rule set to the tool's defaults means both can start failing on a day you
+changed nothing. Pin it, and change it deliberately.
 
 ### Seed the corpus
 

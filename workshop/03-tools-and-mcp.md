@@ -37,9 +37,9 @@ to fetch something, it's a tool.
 The current SDK generates the tool schema from your **type hints and docstring**:
 
 ```python
-from mcp.server import MCPServer
+from mcp.server import FastMCP
 
-mcp = MCPServer("coach-corpus")
+mcp = FastMCP("coach-corpus")
 
 @mcp.tool()
 async def search_corpus(query: str, limit: int = 5) -> str:
@@ -55,13 +55,36 @@ if __name__ == "__main__":
     mcp.run(transport="stdio")
 ```
 
-That's the entire shape. `httpx2` ships as a dependency of `mcp`, so it's already there
-if you need HTTP.
+That's the entire shape. `httpx` ships as a dependency of `mcp` (along with `httpx-sse`,
+`starlette`, and `uvicorn`), so it's already there if you need HTTP. Confirm what you
+actually have rather than taking this list's word for it:
 
-> **Note the import.** It's `from mcp.server import MCPServer`. Earlier material —
-> including a lot of blog posts and, frankly, a lot of model output — uses
-> `from mcp.server.fastmcp import FastMCP`. Check the import against current docs rather
-> than trusting recall, yours or an assistant's.
+```bash
+python -c "import importlib.metadata as m; print(m.requires('mcp'))"
+```
+
+> **Note the import — and how this line got fixed.** The class is `FastMCP`, and
+> `mcp.server` re-exports it, so both `from mcp.server import FastMCP` and
+> `from mcp.server.fastmcp import FastMCP` work.
+>
+> An earlier draft of this module said `from mcp.server import MCPServer`, which raises
+> `ImportError` on line 1 — the name does not exist. It got there the interesting way:
+> the assistant writing this workshop first recalled `FastMCP` correctly, then "corrected"
+> itself against documentation that described a different version, and then wrote a
+> confident note telling you to trust the doc over recall. Every step of that was
+> reasonable. The result was still wrong.
+>
+> **The check that would have caught it takes five seconds:**
+>
+> ```bash
+> python -c "from mcp.server import FastMCP; print(FastMCP)"
+> ```
+>
+> Run it against the version you actually installed. Docs describe *a* version; your
+> virtualenv contains *the* version. When they disagree, the virtualenv wins — and an
+> import is the cheapest possible thing to verify, because it either resolves or it
+> doesn't. This is the same principle as the rest of the workshop's verifiers: prefer the
+> check that executes over the source that asserts.
 
 ### Tool descriptions are the highest-leverage thing you write
 
@@ -226,11 +249,11 @@ standing up a server.
 
 from __future__ import annotations
 
-from mcp.server import MCPServer
+from mcp.server import FastMCP
 
 from coach import corpus_index
 
-mcp = MCPServer("coach-corpus")
+mcp = FastMCP("coach-corpus")
 
 
 @mcp.tool()

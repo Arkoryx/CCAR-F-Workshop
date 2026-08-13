@@ -179,8 +179,12 @@ payload = json.load(sys.stdin)
 target = payload.get("tool_input", {}).get("file_path", "")
 
 if target:
-    resolved = Path(target).resolve()
-    corpus = (Path(payload["cwd"]) / "corpus").resolve()
+    # Resolve against the cwd the payload gives us, never the hook process's own
+    # cwd. Joining an absolute target discards the left side, so this is correct
+    # whether Claude Code sends an absolute path or a relative one.
+    cwd = Path(payload["cwd"])
+    resolved = (cwd / target).resolve()
+    corpus = (cwd / "corpus").resolve()
     if resolved == corpus or corpus in resolved.parents:
         json.dump({
             "hookSpecificOutput": {

@@ -64,8 +64,9 @@ def invalid_payloads_rejected() -> tuple[bool, str]:
 
     A validator that only ever sees valid input is untested.
     """
-    from coach.schema import Question
     from pydantic import ValidationError
+
+    from coach.schema import Question
 
     base = json.loads((FIXTURES / "valid_question.json").read_text(encoding="utf-8"))
     mutations = {

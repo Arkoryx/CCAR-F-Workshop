@@ -53,11 +53,13 @@ def build_options(budget: Budget) -> ClaudeAgentOptions:
         max_turns=budget.max_turns,
         can_use_tool=make_permission_callback(budget),
         agents={"question-critic": CRITIC},
+        # Read-only tools are pre-approved. Write is deliberately absent: an
+        # allowed_tools entry naming a whole tool auto-approves it before
+        # can_use_tool runs, which would silently disable the corpus guard.
         allowed_tools=[
             "Read",
             "Grep",
             "Glob",
-            "Write",
             "mcp__coach-corpus__search_corpus",
             "mcp__coach-corpus__get_objectives",
         ],

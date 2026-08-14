@@ -83,8 +83,18 @@ cache. Only tool-definition and model changes force a full rebuild.
 **The escape hatch for mid-session instructions:** append a `{"role": "system", ...}`
 message to `messages[]` instead of editing the top-level `system`. Editing `system`
 invalidates the entire conversation history behind it; a system *message* sits after the
-cached prefix and leaves it intact. Available on Opus 5, Opus 4.8, Fable 5 — no beta
-header.
+cached prefix and leaves it intact. No beta header.
+
+Support is **Opus 5, Opus 4.8, Fable 5 (and Mythos 5) — but *not* Sonnet 5.** That
+exception is the whole trap: Sonnet 5 is current and capable, so it reads like it should
+be on the list, and the feature is model-gated rather than tier-gated. Unsupported models
+return a 400 (`role 'system' is not supported on this model`) — catch it and fall back to
+putting the instruction in the user turn.
+
+There's also a placement rule that bites in practice: the system message must **follow a
+user message** (or an assistant turn ending in server-tool use), and must be either the
+last entry in `messages` or be followed by an assistant turn. It can never be
+`messages[0]` — the opening prompt belongs in top-level `system`.
 
 ### Compaction vs. context editing — different things
 
@@ -419,7 +429,15 @@ tools and system intact.
 
 **6 — B.** A mid-conversation system message sits after the cached prefix. Editing
 top-level `system` changes the prefix ahead of the entire history and re-processes all of
-it. Supported on Opus 5, Opus 4.8, Fable 5 — no beta header.
+it. No beta header.
+
+Note the qualifier in the question — *"on a supporting model"* — because the support list
+is the examinable part: **Opus 5, Opus 4.8, Fable 5, Mythos 5 — and not Sonnet 5.** It is
+gated per model, not per tier, so the current Sonnet being excluded is exactly the kind of
+detail a question is built on. On an unsupported model you get a 400
+(`role 'system' is not supported on this model`), so C is the real fallback there: put the
+instruction in the user turn. It caches identically, but it is spoofable by anything that
+writes user-visible content, whereas the system role is not.
 
 **7 — B.** The compaction blocks in `response.content` are what the API uses to replace
 compacted history. Append the full content, not the extracted string.

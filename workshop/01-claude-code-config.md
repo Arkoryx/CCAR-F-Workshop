@@ -84,7 +84,17 @@ For `PreToolUse`, the JSON decision looks like:
 }
 ```
 
-`permissionDecision` is `"allow"`, `"deny"`, or `"escalate"`.
+`permissionDecision` is `"allow"`, `"deny"`, or `"ask"`. `"ask"` is the middle setting:
+the hook declines to decide and hands the call back to the normal permission flow, which
+prompts the user. Contrast that with exiting 0 and printing nothing, which is *no
+opinion* — see drill Q3.
+
+> **A fourth value exists in the Agent SDK.** `claude-agent-sdk` 0.2.137 types
+> `permissionDecision` as `Literal["allow", "deny", "ask", "defer"]`
+> (`types.py`, `PreToolUseHookSpecificOutput`). `"defer"` halts the run and returns the
+> tool call to your code as a `DeferredToolUse`, so the caller can inspect it and decide
+> whether to resume — which requires a programmatic caller that *can* resume. For
+> Claude Code CLI hooks, the set to know is **allow / deny / ask**.
 
 ### Matchers
 
@@ -416,10 +426,10 @@ D. A `PostToolUse` hook that logs reads
 
 A. `permissions` B. `model` C. `hooks` D. `outputStyle` E. `env`
 
-**8.** In a `PreToolUse` hook's JSON output, which values are valid for
+**8.** In a **Claude Code** `PreToolUse` hook's JSON output, which values are valid for
 `permissionDecision`? *(Select three.)*
 
-A. `allow` B. `deny` C. `ask` D. `escalate` E. `defer`
+A. `allow` B. `deny` C. `ask` D. `escalate` E. `confirm`
 
 **9.** Which file should be committed to git so the whole team shares the configuration?
 
@@ -491,7 +501,19 @@ reference:
 
 `ask` is the one people miss. It hands the decision back to the normal permission flow
 and prompts the user — the middle setting between the hook deciding for you and the hook
-staying out of it. `defer` is invented.
+staying out of it. `escalate` and `confirm` are invented.
+
+> **On `defer`.** This question originally offered `defer` as option E and the key called
+> it invented. That is no longer true: `claude-agent-sdk` 0.2.137 types
+> `permissionDecision` as `Literal["allow", "deny", "ask", "defer"]`, with a
+> `DeferredToolUse` dataclass behind it. With `defer` on the list, a "select three"
+> question had four defensible answers — the same defect Q4 had. The option was replaced
+> and the question scoped to **Claude Code** hooks.
+>
+> Keep the distinction: `defer` halts the run and hands the tool call back to *your code*
+> to resume or abandon, which presupposes a programmatic caller. That is an Agent SDK
+> capability, not something an interactive CLI session has anywhere to return to. The
+> concept brief covers it.
 
 > **This key was wrong until an audit caught it, and the way it was wrong is worth more
 > than the fact.** It previously said `escalate` — a plausible-sounding word that appears

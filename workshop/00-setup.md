@@ -120,7 +120,47 @@ Module 05 builds real cost tracking into the Coach. Until then, watch the Consol
 
 ---
 
-## 5. Scaffold the project
+## 5. Work on your own branch
+
+Do this before you create a single file. This repo does two jobs at once:
+
+| Role | Paths | Belongs on |
+|---|---|---|
+| The workshop itself | `workshop/`, `references/`, `app/verify/`, `README.md` | `main` |
+| Your build of the Coach | `app/CLAUDE.md`, `app/.claude/`, `app/coach/`, `app/tests/`, `app/corpus/` | your branch |
+
+Mixing them is a mess in both directions: your half-finished module 03 server ends up in
+the workshop's history, and any correction to the workshop arrives tangled in someone
+else's build. Separate them now.
+
+```bash
+git switch -c workthrough
+```
+
+Everything you write from here goes on `workthrough`. Commit as often as you like — it's
+your branch and nobody else reads it.
+
+**When you find a defect in the workshop** — and you will; see the audit table in the
+README for the ones already found — fix it on `main`, not on your branch, so the fix
+survives for whoever works through this next:
+
+```bash
+git switch main          # fix workshop/, references/, README.md — commit
+git switch workthrough   # back to your build
+git merge main           # pull the correction into your copy
+```
+
+That merge is reliably clean, and not by luck: the two path sets in the table above don't
+overlap, so the branches never touch the same file. If switching branches mid-module gets
+annoying, `git worktree add ../ccarf-fixes main` gives you a second directory checked out
+to `main` and your working tree never moves.
+
+> The `solutions` branch is a third thing again — the reference implementation. Leave it
+> alone; read from it with `git show solutions:app/coach/<file>.py` when you're stuck.
+
+---
+
+## 6. Scaffold the project
 
 From the workshop root:
 
@@ -182,14 +222,23 @@ You'll add more as you go — module 03's MCP server reads whatever is in `corpu
 
 ## Checkpoint
 
-Run each of these. All four must pass before module 01.
+Run each of these. All five must pass before module 01.
 
 ```bash
 claude --version                              # → version + "(Claude Code)"
 python --version                              # → 3.11 or newer
 python -c "import anthropic, mcp, pydantic"   # → no output = success
 ls app/corpus/                                # → exam-blueprint.md
+git branch --show-current                     # → workthrough, not main
 ```
+
+> **If the import check fails but `python --version` looks right, your venv isn't
+> active in *this* shell.** Activation is per-shell — a new terminal, or switching
+> between PowerShell and Git Bash, starts unactivated. `which python` (or
+> `Get-Command python`) tells you immediately: if it doesn't point inside `.venv`,
+> that's your answer. On Windows the Bash incantation is
+> `source .venv/Scripts/activate` — `Scripts`, not the `bin` every Unix tutorial
+> shows you, and the extensionless `activate`, not `Activate.ps1`.
 
 If `python -c "import claude_agent_sdk"` also succeeds, module 04 will work. If it fails,
 that's fine for now — fix it before module 04, not before module 01.

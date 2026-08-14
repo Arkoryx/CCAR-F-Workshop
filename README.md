@@ -168,6 +168,25 @@ reference. Six defects:
 | 03 Q4 | Cited a 100,000-character threshold documented for **Managed Agents**, not Claude Code. |
 | 05 Q6 | Omitted that Sonnet 5 is **excluded** from mid-conversation system messages. |
 
+### Second pass — the audit's own blind spot
+
+The audit above checked the **drill questions**. It did not check the **concept briefs**,
+and that gap had already cost something:
+
+| Where | Defect |
+|---|---|
+| 01 concept brief | Still taught `permissionDecision: "escalate"` — the *same* wrong value the Q8 fix removed. The key was corrected; the prose three sections above it was not. A reader met the wrong value first. |
+| 01 Q8 | `defer` was offered as a distractor and the key called it invented. `claude-agent-sdk` 0.2.137 types `permissionDecision` as `Literal["allow", "deny", "ask", "defer"]`. Four correct answers on a "select three" — the Q4 defect again. Option replaced, question scoped to Claude Code. |
+
+Two lessons worth more than the facts. **A fact fixed in one place goes stale in the
+other** — grep for the wrong value everywhere before calling it fixed. And **a key can rot
+without being wrong when written**: `defer` genuinely didn't exist when that key was
+written. Answers pinned to a moving SDK need a version, not just a source.
+
+Checked and found **clean** on the same pass: module 01's hook event list (all ten names
+real; the docs list 31, but "events you should know" is a fair subset) and its exit-code
+table (0 / 2 / other).
+
 **And one live bug, found while auditing a key that was correct:** module 04 listed
 `"Write"` in `allowed_tools` alongside `can_use_tool`, which auto-approves the tool
 *before* the callback runs. The corpus guardrail never fired. Fixed, plus a new verifier

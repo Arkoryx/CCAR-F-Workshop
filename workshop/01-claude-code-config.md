@@ -135,9 +135,26 @@ tracks weak domains across sessions.
 
 ## Conventions
 - Questions are Pydantic models, never raw dicts. Schema lives in `coach/schema.py`.
-- Every generated question must map to a domain in `references/exam-blueprint.md`.
+- Every generated question must map to a domain in `corpus/exam-blueprint.md`.
 - Format with `ruff` before committing.
 ```
+
+Two things to notice about what you just wrote, because both recur.
+
+**Every path in that file resolves relative to `app/`,** where `CLAUDE.md` lives. The
+blueprint line points at `corpus/exam-blueprint.md` — the copy you made in module 00 —
+not at `../references/exam-blueprint.md`, the canonical file at the repo root. Both exist
+and both contain the same text, so the distinction looks pedantic until module 03, when
+the MCP server starts serving the corpus and the Coach has exactly one supported way to
+reach its material. Project memory should describe the architecture you're building, not
+a shortcut around it.
+
+**`Format with ruff before committing` is about to become redundant.** Step 4's
+`PostToolUse` hook runs `ruff format` on every write, whether or not the model read this
+line. Keep it — it's useful to a human reading the repo — but watch what happened: an
+instruction *asking* the model to cooperate got superseded by a mechanism that doesn't
+need it to. That is this module's entire thesis, and `corpus/` is about to get the same
+treatment three times over.
 
 ### Step 2 — Permissions
 
@@ -215,7 +232,11 @@ defeated by `./coach/../corpus/notes.md`.
 
 ### Step 4 — A `PostToolUse` hook that formats on save
 
-Add both hooks to `app/.claude/settings.json`:
+Add both hooks to `app/.claude/settings.json`. **`hooks` is a sibling of `permissions`,
+not a replacement for it** — merge the block below into the file from step 2. Pasting it
+over the file drops your permission rules, and because a settings file that parses is
+never reported as wrong, nothing will tell you. Your finished file has three top-level
+keys: `$schema`, `permissions`, `hooks`.
 
 ```json
 {

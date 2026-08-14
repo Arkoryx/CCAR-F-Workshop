@@ -129,10 +129,17 @@ itself is the lesson, not just infrastructure.
 
 ### Still open, highest risk first
 
-- [ ] **Verify the drill answer keys.** ~50 questions across modules 01–05, none checked
-      against a source. This is the workshop's own stated worst failure mode: a wrong
-      build step breaks loudly, a wrong answer key teaches you the wrong thing in
-      silence. Costs nothing but time — every claim is checkable against docs.
+- [x] ~~**Verify the drill answer keys.**~~ **Done.** All 50 checked against primary
+      sources (installed Claude Code binary, installed `mcp` / `claude-agent-sdk`
+      packages, current API reference). Six defects fixed across modules 01, 03, and 05;
+      modules 02 and 05 answers were clean. The audit also surfaced a live bug in module
+      04's build code — `allowed_tools` shadowing `can_use_tool`, leaving the corpus
+      guardrail inert — now fixed with a regression check. See README for the table.
+
+      **The pattern worth keeping:** every defect was a *plausible-sounding recalled
+      fact* — `escalate`, `MCPServer`, `httpx2`, a threshold borrowed from an adjacent
+      product surface. None were reasoning errors. All were cheap to check against the
+      thing itself and expensive to catch by reading.
 - [ ] **Run the `--live` checks once.** No API call has ever been made against this
       code. Module 05's central claim — that caching works — is only demonstrable by a
       live run asserting `cache_read_input_tokens > 0` on a second identical request.

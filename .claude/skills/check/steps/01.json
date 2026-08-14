@@ -1,0 +1,66 @@
+{
+  "module": "01",
+  "title": "Claude Code Configuration & Workflows",
+  "mode": "verifier",
+  "run_from": "app",
+  "command": "python verify/module_01.py",
+  "note": "Labels must match app/verify/module_01.py exactly. All 17 checks map to exactly one step; if that stops being true, this file is stale and /check will under-report.",
+  "prerequisites": {
+    "from_module": "00",
+    "labels": [
+      "pyproject.toml exists",
+      "corpus/exam-blueprint.md exists"
+    ]
+  },
+  "steps": {
+    "1": {
+      "title": "CLAUDE.md",
+      "labels": [
+        "CLAUDE.md exists"
+      ],
+      "limit": "Existence only. This passes whether the file was derived or pasted, and whether its contents are good or useless."
+    },
+    "2": {
+      "title": "Permissions",
+      "labels": [
+        ".claude/settings.json exists",
+        "settings.json is valid JSON",
+        "corpus writes are denied at the permission layer",
+        "secrets are denied, not merely 'ask'"
+      ]
+    },
+    "3": {
+      "title": "A PreToolUse hook that protects the corpus",
+      "labels": [
+        ".claude/hooks/protect_corpus.py exists",
+        "hook DENIES a write inside corpus/",
+        "hook ALLOWS a write inside coach/",
+        "hook DENIES a traversal path into corpus/"
+      ],
+      "note": "The last three execute the hook with synthetic stdin. The ALLOWS check exists to catch a hook that denies everything and looks like it works."
+    },
+    "4": {
+      "title": "A PostToolUse hook that formats on save",
+      "labels": [
+        "a PreToolUse hook is registered for Write|Edit"
+      ],
+      "note": "Only the PreToolUse registration is asserted. A missing or wrong PostToolUse block will not fail anything here."
+    },
+    "5": {
+      "title": "A subagent",
+      "labels": [
+        ".claude/agents/question-critic.md exists",
+        "question-critic is defined and read-only"
+      ]
+    },
+    "6": {
+      "title": "CI",
+      "labels": [
+        ".github/workflows/ci.yml exists",
+        "coach/__init__.py exists",
+        "tests/test_smoke.py exists"
+      ],
+      "limit": "Existence only. The workflow file is never parsed or run here; confirm CI locally with `ruff check . && pytest -q`."
+    }
+  }
+}

@@ -70,6 +70,35 @@ stated result, move on.
 Work through the modules in order. Each one builds on the last — module 04's agent calls
 module 03's MCP server using module 02's prompts, inside module 01's Claude Code setup.
 
+### Two skills drive the workshop
+
+Reading a module and copying its code blocks teaches you that the file looks like that. It
+doesn't teach you why it couldn't look otherwise. So the build steps are delivered by a
+skill that makes you attempt each piece **before** showing you the answer:
+
+| Command | What it does |
+|---|---|
+| `/teach` | Resume the current step. Sub-steps, each with its reasoning and an exam note; you write, then compare. |
+| `/teach 01.4` | Open a specific step. Invoke **once per step** — sub-steps happen in conversation after that. |
+| `/check 01.2` | Grade one step against the module's real verifier checks. Call it as often as you like. |
+| `/check 01` | Run the whole module checkpoint. |
+
+**`/teach` never decides you're done and never writes progress — `/check` does.** That
+split is deliberate: if the thing that taught you a step also graded it, your progress
+would rest on a judgement about the conversation instead of on an executable assertion.
+It's the same reason the verifiers assert end state rather than transcript.
+
+`/check` records to a gitignored `.teach-progress.json`, and **only on a genuine pass**.
+Unearned state is worse than no state.
+
+The honest limit: these checks assert *state, not understanding*. `CLAUDE.md exists`
+passes whether you derived the file or pasted it. `/check` says so when a step passes on
+file-existence alone.
+
+Skills live in `.claude/skills/`. **After a fresh clone, restart Claude Code once** — a
+top-level skills directory that didn't exist when the session started isn't picked up
+until restart.
+
 - **`app/`** is where *you* build the Coach. It starts near-empty by design.
 - **The `solutions` branch** holds a working reference implementation — the same
   `app/coach/` you're about to write, with every verifier passing against it. It is a

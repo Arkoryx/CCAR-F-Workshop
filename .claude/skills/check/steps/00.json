@@ -1,0 +1,43 @@
+{
+  "module": "00",
+  "title": "Setup",
+  "mode": "shell",
+  "run_from": ".",
+  "note": "Module 00 has no verifier script — its checkpoint is five shell commands. Each is written to succeed or fail on its exit code so the result is not a judgement call. Run with the venv active.",
+  "checks": [
+    {
+      "label": "Claude Code CLI installed",
+      "command": "claude --version",
+      "expect": { "stdout_contains": "(Claude Code)" }
+    },
+    {
+      "label": "Python is 3.11 or newer",
+      "command": "python -c \"import sys; assert sys.version_info >= (3, 11), sys.version; print(sys.version.split()[0])\"",
+      "expect": { "exit_code": 0 }
+    },
+    {
+      "label": "core packages import",
+      "command": "python -c \"import anthropic, mcp, pydantic\"",
+      "expect": { "exit_code": 0 },
+      "on_failure": "If this fails but the Python version check passed, the venv is not active in this shell. Activation is per-shell. Run `which python` — if it is not inside .venv, that is the answer. Bash on Windows: `source .venv/Scripts/activate` (Scripts, not bin; the extensionless activate, not Activate.ps1)."
+    },
+    {
+      "label": "corpus is seeded",
+      "command": "ls app/corpus/exam-blueprint.md",
+      "expect": { "exit_code": 0 }
+    },
+    {
+      "label": "working on a learner branch, not main",
+      "command": "git branch --show-current",
+      "expect": { "stdout_not_equals": "main" },
+      "on_failure": "You are on main. Workshop content lives on main; your build belongs on your own branch. See workshop/00-setup.md section 5."
+    }
+  ],
+  "optional": [
+    {
+      "label": "claude_agent_sdk imports (needed for module 04, not for 01)",
+      "command": "python -c \"import claude_agent_sdk\"",
+      "expect": { "exit_code": 0 }
+    }
+  ]
+}

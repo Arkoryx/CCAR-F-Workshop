@@ -5,6 +5,14 @@
 
 Time: 30–45 minutes.
 
+> **Run this workshop with `/teach`.** From module 01 on, the build steps are delivered by
+> a project skill that walks each step in pieces and makes you attempt them before showing
+> you anything — `/teach 01.1` to open a step, `/check 01.1` to have it graded. Module 00
+> is the exception: nothing here is derivable, so `/teach 00` is a guided checklist and
+> `/check 00` runs the checkpoint below. **On a fresh clone, restart Claude Code once**
+> before the skills appear; a top-level `.claude/skills/` that didn't exist at session
+> start isn't picked up until then.
+
 ---
 
 ## 1. What you're about to build
@@ -239,6 +247,9 @@ git branch --show-current                     # → workthrough, not main
 > that's your answer. On Windows the Bash incantation is
 > `source .venv/Scripts/activate` — `Scripts`, not the `bin` every Unix tutorial
 > shows you, and the extensionless `activate`, not `Activate.ps1`.
+
+Or run **`/check 00`**, which executes all five and records module 00 complete only if
+every one passes.
 
 If `python -c "import claude_agent_sdk"` also succeeds, module 04 will work. If it fails,
 that's fine for now — fix it before module 04, not before module 01.

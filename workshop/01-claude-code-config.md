@@ -393,9 +393,9 @@ B. The tool call proceeds normally
 C. The user is prompted to approve
 D. The hook is retried once
 
-**4.** Which matcher fires on **exactly** the `Bash` and `Edit` tools?
+**4.** Which matcher fires on **exactly** the `Bash` and `Edit` tools, and nothing else?
 
-A. `"Bash.*Edit"` B. `"Bash|Edit"` C. `"^(Bash|Edit)$"` D. `"*"`
+A. `"Bash.*Edit"` B. `"Bash|Edit"` C. `"(Bash|Edit)"` D. `"*"`
 
 **5.** Where do project-scoped subagent definitions live?
 
@@ -419,7 +419,7 @@ A. `permissions` B. `model` C. `hooks` D. `outputStyle` E. `env`
 **8.** In a `PreToolUse` hook's JSON output, which values are valid for
 `permissionDecision`? *(Select three.)*
 
-A. `allow` B. `deny` C. `escalate` D. `retry` E. `defer`
+A. `allow` B. `deny` C. `ask` D. `escalate` E. `defer`
 
 **9.** Which file should be committed to git so the whole team shares the configuration?
 
@@ -446,12 +446,27 @@ the *lowest* priority. This inverts most people's intuition.
 JSON decision); any other non-zero code is a *non-blocking* error — the action proceeds
 and the error is logged. D is the trap: only 2 blocks.
 
-**3 — B.** Exit 0 with no JSON decision means normal flow. Hooks are opt-in interference;
-silence is consent.
+**3 — B.** Exit 0 with no JSON on stdout means the hook reports *no decision*, and the
+action continues through the normal permission flow. Hooks are opt-in interference.
+
+Precisely: silence is not "approved", it's "no opinion" — whatever your `permissions`
+rules would have done still happens, prompt included. C is wrong because the *hook*
+didn't cause a prompt, not because a prompt is impossible.
 
 **4 — B.** A matcher containing only letters, digits, `_`, `-`, spaces, `,`, and `|` is
-treated as exact string(s). Add any other character and it becomes an unanchored regex —
-so C is a regex that happens to work, and A is a regex that matches neither tool.
+treated as exact string(s). Add **any** other character and the whole matcher becomes a
+JavaScript regex tested with `RegExp.prototype.test` — which succeeds on a match
+*anywhere* in the tool name, not just a whole-string match.
+
+That unanchored behaviour is what makes C wrong: the parentheses tip it onto the regex
+path, and `(Bash|Edit)` then also fires on `NotebookEdit`, because `Edit` appears inside
+it. A is a regex too, and matches neither tool — it needs `Bash` and `Edit` in the *same*
+name, like `BashEdit`. To get whole-string matching out of a regex you must anchor it
+yourself: `^(Bash|Edit)$`.
+
+> Verified against Claude Code's hooks reference. This question originally offered
+> `^(Bash|Edit)$` as option C — which is *also* correct, making the question unanswerable.
+> Caught during an audit of these keys, not by a reader.
 
 **5 — B.** `.claude/agents/` for project scope, `~/.claude/agents/` for user scope.
 
@@ -459,10 +474,40 @@ so C is a regex that happens to work, and A is a regex that matches neither tool
 the model to behave, which is not a security boundary. This distinction (deterministic
 enforcement vs. instruction) is the single most testable idea in this domain.
 
-**7 — B and D.** `model` and `outputStyle` are read at startup. `permissions`, `hooks`,
-and `env` reload live from the file.
+**7 — B and D.** `model` and `outputStyle` are read once at session start. The docs name
+exactly these two: `model` (switch mid-session with `/model` instead) and `outputStyle`
+(part of the system prompt, rebuilt on `/clear` or restart). `permissions` and `hooks`
+are documented as reloading live — Claude Code watches the settings files.
 
-**8 — A, B, C.**
+`env` is the honest gap here: it is not named in either list. Live reload is the
+documented default for "most keys", so `env` is *probably* live, but process-environment
+variables are exactly the kind of thing usually fixed at startup. Treat it as unverified
+rather than assuming — and note that the question doesn't depend on it.
+
+**8 — A, B, C** — `allow`, `deny`, `ask`. Straight from Claude Code's own hooks
+reference:
+
+> `permissionDecision` — `"allow"`, `"deny"`, or `"ask"` (PreToolUse only)
+
+`ask` is the one people miss. It hands the decision back to the normal permission flow
+and prompts the user — the middle setting between the hook deciding for you and the hook
+staying out of it. `defer` is invented.
+
+> **This key was wrong until an audit caught it, and the way it was wrong is worth more
+> than the fact.** It previously said `escalate` — a plausible-sounding word that appears
+> nowhere in the API. It was never checked; it was recalled, written down confidently,
+> and would have taught you a value that does not exist. Nothing would have errored: you
+> would have found out by writing a hook that silently did nothing.
+>
+> The fix came from grepping the installed binary, which is as close to ground truth as
+> this gets:
+>
+> ```bash
+> grep -ao 'permissionDecision` - "allow[^`]*' ~/.local/share/claude/versions/<version>
+> ```
+>
+> Same lesson as module 03's import: when a fact is cheap to check against the thing
+> itself, check it against the thing itself.
 
 **9 — B.** `.claude/settings.json` is the shared, committed project file.
 `settings.local.json` is gitignored and personal.

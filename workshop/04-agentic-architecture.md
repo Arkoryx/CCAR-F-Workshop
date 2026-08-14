@@ -243,11 +243,12 @@ def build_options(budget: Budget) -> ClaudeAgentOptions:
         max_turns=budget.max_turns,
         can_use_tool=make_permission_callback(budget),
         agents={"question-critic": CRITIC},
+        # Read-only tools are pre-approved here. Write deliberately is NOT --
+        # see the note below, it is the whole reason the guardrail works.
         allowed_tools=[
             "Read",
             "Grep",
             "Glob",
-            "Write",
             "mcp__coach-corpus__search_corpus",
             "mcp__coach-corpus__get_objectives",
         ],
@@ -296,6 +297,41 @@ if __name__ == "__main__":
     if spent.denials:
         print(f"guardrail denials: {spent.denials}")
 ```
+
+> ### `allowed_tools` can silently disable `can_use_tool`
+>
+> **`Write` is missing from that list on purpose.** An `allowed_tools` entry that names a
+> whole tool auto-approves it *before* the permission callback is consulted. List `Write`
+> there and the corpus guard you just wrote never runs — the callback stays attached, the
+> unit tests still pass, and the corpus is unprotected.
+>
+> This module shipped that exact bug. The original list included `"Write"`, and the SDK
+> says so out loud:
+>
+> ```
+> can_use_tool will not be invoked for: Read, Grep, Glob, Write,
+> mcp__coach-corpus__search_corpus, mcp__coach-corpus__get_objectives.
+> ```
+>
+> That is `CanUseToolShadowedWarning`, raised at query construction. It was never seen
+> because the guardrail was only ever tested by calling the callback directly — which
+> proves the function works, not that anything calls it.
+>
+> **The rule** (from the CLI's parser): an entry auto-approves the whole tool when it has
+> no specifier — `"Write"` — or an empty/wildcard one — `"Write()"`, `"Write(*)"`. A real
+> specifier like `"Write(coach/**)"` only pre-approves matching calls; everything else
+> falls through to `can_use_tool`. So you have three options, in preference order:
+>
+> 1. **Leave the tool out of `allowed_tools`** (what we do here). Every call routes
+>    through the callback.
+> 2. **Narrow the entry** — `"Write(coach/**)"` pre-approves the safe paths and lets the
+>    rest fall through.
+> 3. **Use a `PreToolUse` hook instead**, which sits outside this mechanism entirely —
+>    which is exactly what module 01 built, and why belt-and-braces was worth it.
+>
+> The general lesson outlives this API: **"the guard is installed" and "the guard is
+> reachable" are different claims, and only the second one protects anything.** A test
+> that invokes your guard directly can only ever prove the first.
 
 ### Step 3 — Test the guardrail before you run the agent
 
@@ -437,8 +473,21 @@ and no sandbox — those are A and C, which belong to the Agent SDK and Managed 
 interrupts.
 
 **4 — B.** The callback fires only when permission evaluation reaches a prompt. A tool
-already auto-approved by an `allow` rule or `allowed_tools` never gets there. Pre-approving
-everything and then wondering why the callback is silent is a common self-inflicted wound.
+already auto-approved by an `allow` rule or an `allowed_tools` entry never gets there.
+
+The SDK detects this and warns — `CanUseToolShadowedWarning` at query construction:
+
+> `can_use_tool will not be invoked for: Read, Grep, Glob, Write, …` — an `allowed_tools`
+> entry that allows a whole tool auto-approves it before the callback is consulted.
+
+**That warning was fired by this module's own build code**, which listed `"Write"` in
+`allowed_tools` while relying on `can_use_tool` to protect the corpus. The callback was
+attached, the unit tests passed, the verifier passed — and no write was ever gated. It was
+found by auditing this answer key, not by running the agent. See the callout in Step 2.
+
+Also worth knowing for the exam: `permission_mode="bypassPermissions"` shadows the
+callback for *everything*, and allow rules in settings files shadow it invisibly — the SDK
+can't see those, so its warning won't mention them.
 
 **5 — A and C.** The typed results from `claude_agent_sdk.types`. Bare booleans and dicts
 aren't the contract.

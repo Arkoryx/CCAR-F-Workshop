@@ -152,6 +152,53 @@ def options_wire_the_guardrails() -> tuple[bool, str]:
 c.check("options wire budget, callback, subagent, and MCP", options_wire_the_guardrails)
 
 
+def callback_is_reachable_for_writes() -> tuple[bool, str]:
+    """A guardrail that is attached but never consulted is not a guardrail.
+
+    An `allowed_tools` entry that names a whole tool auto-approves it *before*
+    can_use_tool runs, so listing "Write" there silently disables the corpus
+    guard. The check above passes in that state -- it only proves the callback
+    was assigned. This one proves a write can still reach it.
+    """
+    from coach.agent import build_options
+    from coach.guardrails import WRITE_TOOLS, Budget
+
+    opts = build_options(Budget(max_turns=7))
+
+    def allows_whole_tool(entry: str) -> str | None:
+        # Mirrors the CLI rule: no specifier, or an empty / lone-wildcard one.
+        entry = entry.strip()
+        if not entry:
+            return None
+        open_index = entry.find("(")
+        if open_index == -1:
+            return entry
+        if open_index == 0 or not entry.endswith(")"):
+            return None
+        return entry[:open_index] if entry[open_index + 1 : -1] in ("", "*") else None
+
+    shadowed = {
+        tool
+        for entry in (opts.allowed_tools or [])
+        if (tool := allows_whole_tool(entry)) is not None
+    }
+    blinded = sorted(shadowed & WRITE_TOOLS)
+    if blinded:
+        return False, (
+            f"allowed_tools auto-approves {blinded} before can_use_tool runs, so the "
+            "corpus guard never fires for it. Drop it from allowed_tools, or narrow the "
+            "entry to a real specifier so other calls fall through to the callback."
+        )
+
+    if opts.permission_mode == "bypassPermissions":
+        return False, "permission_mode='bypassPermissions' auto-approves everything"
+
+    return True, ""
+
+
+c.check("a write can actually reach the permission callback", callback_is_reachable_for_writes)
+
+
 def model_is_current() -> tuple[bool, str]:
     from coach.agent import MODEL
 

@@ -439,12 +439,47 @@ D. It reduces the generated schema size
 **1 — B.** Resources are file-like data read by the client/application. Tools are called
 by the model. If you want the model to decide when to fetch, make it a tool.
 
-**2 — B.** Type hints and the docstring. Which is why a vague docstring is a vague schema.
+**2 — B.** Type hints and the docstring — but they feed *different* fields, and the split
+is worth knowing precisely. Run it and look:
+
+```python
+@mcp.tool()
+async def sample(query: str, limit: int = 5) -> str:
+    """Search something.
+
+    Args:
+        query: Space-separated terms.
+    """
+```
+```json
+{"properties": {"query": {"title": "Query", "type": "string"},
+                "limit": {"default": 5, "title": "Limit", "type": "integer"}},
+ "required": ["query"], "type": "object"}
+```
+
+**Type hints alone produce the schema** — types, defaults, and which parameters are
+required. **The docstring becomes the tool's `description`**, verbatim, `Args:` block
+included.
+
+Note what is *not* there: no per-parameter `description`. Your `Args:` lines are not
+parsed into the schema's properties — they reach the model as part of the description
+blob. Still worth writing, because the model reads that blob. Just don't picture them
+landing in `properties.query.description`, because they don't.
 
 **3 — C.** `mcp__<server>__<tool>`. Same form in hook matchers and `allowed_tools`.
 
-**4 — C.** Over ~100,000 characters, output is offloaded to a file and the model gets a
-preview plus the path. Note the threshold is characters, not tokens.
+**4 — C.** Oversized tool output is offloaded to a file; the model gets a truncated
+preview plus the path, and can read the rest if it needs to. The shape of the behaviour
+is the answer — a hard failure (A) or silent loss (B) would make large-output tools
+unusable, and nothing invokes a second model to summarize (D).
+
+> **Scope caveat, because I could only verify half of this.** The specific figure —
+> **100,000 characters** (~25,000 tokens), counted in *characters, not tokens* — is
+> documented for **Managed Agents**, where it covers built-in and MCP tools alike with no
+> configuration. I could not find it stated for MCP servers under Claude Code, which is
+> the setup this module actually builds. The offload *behaviour* is right either way;
+> treat the exact number as unconfirmed for your context. If an exam question hinges on
+> the figure, it is testing the Managed Agents surface.
 
 **5 — B.** Prescriptive "call this when…" descriptions give measurable lift on current
 models, which reach for tools conservatively. A is the trap — that emphasis style was for

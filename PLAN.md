@@ -121,13 +121,31 @@ itself is the lesson, not just infrastructure.
 
 ## 7. Open Items
 
+- [x] ~~Rename `CCAF Workshop` → `CCAR-F Workshop`~~ — done.
+- [x] ~~Populate a reference implementation per module~~ — done, on the **`solutions`
+      branch** rather than a `solutions/` folder. The branch keeps the code out of the
+      working tree, so "don't read ahead" is enforced by structure instead of willpower.
+      All six verifiers pass against it.
+
+### Still open, highest risk first
+
+- [ ] **Verify the drill answer keys.** ~50 questions across modules 01–05, none checked
+      against a source. This is the workshop's own stated worst failure mode: a wrong
+      build step breaks loudly, a wrong answer key teaches you the wrong thing in
+      silence. Costs nothing but time — every claim is checkable against docs.
+- [ ] **Run the `--live` checks once.** No API call has ever been made against this
+      code. Module 05's central claim — that caching works — is only demonstrable by a
+      live run asserting `cache_read_input_tokens > 0` on a second identical request.
+      Cents, not dollars.
+- [ ] **Start the MCP server and connect Claude Code to it.** Module 03's logic is
+      tested; its stdio transport and `.mcp.json` registration are not.
+- [ ] **Run one agent batch.** Module 04's guardrails are unit-tested; the loop is not.
+- [ ] **Seed a real corpus.** `corpus/` holds one 64-line blueprint file. Modules 02 and
+      03 generate and search *from the corpus*, so question quality is capped by what is
+      in there. Needs actual Claude Code / API / MCP / Agent SDK documentation.
 - [ ] Confirm the blueprint against the official Anthropic Partner Academy exam guide
       (current weightings are third-party, though two sources corroborated)
-- [ ] Populate `solutions/` with a reference implementation per module
 - [ ] Decide a default model for bulk generation (Opus for quality vs. Haiku for cost)
-- [ ] **Blocked:** rename `CCAF Workshop` → `CCAR-F Workshop`. Fails with "Device or
-      resource busy" — a process holds a handle on the directory. Needs whatever has it
-      open (Explorer window, editor) closed first.
 
 ---
 

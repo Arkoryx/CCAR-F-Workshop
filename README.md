@@ -147,11 +147,33 @@ pass against it** (17/17, 12/12, 13/13, 13/13, 13/13, 13/13), along with `pytest
 
 | Unverified | Why it matters |
 |---|---|
-| **Drill answer keys** — ~50 questions, none checked against sources | This is the workshop's highest-risk surface *by its own argument*: a wrong build step breaks your code in minutes; a wrong answer key just teaches you the wrong thing, silently. |
+| ~~**Drill answer keys**~~ — **audited**, all 50 checked against primary sources | Found 2 wrong/broken questions and 3 over-claiming explanations, all fixed. Also surfaced a live bug in module 04's build code. Details below. |
 | **Every `--live` check** — no API call has ever been made | Module 05's whole claim (caching works) rests on `cache_read_input_tokens > 0`, which only a live run can show. The offline checks prove the code is *shaped* right, not that it *works*. |
 | **The MCP server has never been started** | Module 03's checkpoint says "one server, both consumers." The logic is tested; the stdio transport and Claude Code's connection to it are not. |
 | **The agent has never run a batch** | Module 04's guardrails are tested directly; the loop they guard has not executed. |
 | **Blueprint weightings** | Third-party sources, not Anthropic. See the caveat in `references/exam-blueprint.md`. |
+
+### What the answer-key audit found
+
+All 50 drill questions were checked against primary sources — the installed Claude Code
+binary, the installed `mcp` and `claude-agent-sdk` packages, and the current API
+reference. Six defects:
+
+| Where | Defect |
+|---|---|
+| 01 Q8 | Key taught `permissionDecision: "escalate"` — **no such value**. It's `ask`, which wasn't even among the options. |
+| 01 Q4 | **Two correct answers** — `"Bash\|Edit"` and `"^(Bash\|Edit)$"` both fire on exactly those tools, and the key admitted it while marking one wrong. |
+| 01 Q7, Q3 | Explanations asserted more than the docs support (`env` reload behaviour; "silence is consent"). |
+| 03 Q2 | Conflated schema with description — type hints alone build the schema; `Args:` lines never reach `properties.*.description`. |
+| 03 Q4 | Cited a 100,000-character threshold documented for **Managed Agents**, not Claude Code. |
+| 05 Q6 | Omitted that Sonnet 5 is **excluded** from mid-conversation system messages. |
+
+**And one live bug, found while auditing a key that was correct:** module 04 listed
+`"Write"` in `allowed_tools` alongside `can_use_tool`, which auto-approves the tool
+*before* the callback runs. The corpus guardrail never fired. Fixed, plus a new verifier
+check that fails on the old code.
+
+Modules **02 and 05 were clean** — 20/20 between them.
 
 The exam blueprint is corroborated by two independent third-party sources but is **not**
 from Anthropic directly — see the caveat in

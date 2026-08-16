@@ -79,21 +79,46 @@ for rel in (
 # --- settings.json is well formed and says what it should --------------------
 c.check("settings.json is valid JSON", lambda: (load_settings() is not None, ""))
 
-c.check(
-    "corpus writes are denied at the permission layer",
-    lambda: (
-        any("corpus" in rule for rule in load_settings()["permissions"]["deny"]),
-        "no deny rule mentions corpus",
-    ),
-)
 
-c.check(
-    "secrets are denied, not merely 'ask'",
-    lambda: (
-        any(".env" in rule for rule in load_settings()["permissions"]["deny"]),
-        "no deny rule covers .env — an 'ask' rule is not a security boundary",
-    ),
-)
+def denies_corpus_writes() -> tuple[bool, str]:
+    """A deny rule must stop *writes*. Denying reads leaves the corpus editable."""
+    deny = load_settings()["permissions"]["deny"]
+    if any(rule.startswith("Write(") and "corpus" in rule for rule in deny):
+        return True, ""
+    if any("corpus" in rule for rule in deny):
+        return False, (
+            "a corpus deny rule exists but it is not a Write rule — denying reads "
+            "does not stop writes"
+        )
+    return False, "no deny rule mentions corpus"
+
+
+def denies_secret_reads() -> tuple[bool, str]:
+    """A deny rule only protects what its *pattern* matches.
+
+    `.env` is a file, not a directory. A pattern like `Read(./.env/**)` targets
+    paths inside a directory that does not exist, and in doing so stops matching
+    the file itself — a rule that reads as protection and enforces nothing.
+    """
+    deny = load_settings()["permissions"]["deny"]
+    env_reads = [rule for rule in deny if rule.startswith("Read(") and ".env" in rule]
+    if not env_reads:
+        if any(".env" in rule for rule in deny):
+            return False, "a .env deny rule exists but it is not a Read rule"
+        return False, "no deny rule covers .env — an 'ask' rule is not a security boundary"
+    if all(".env/" in rule for rule in env_reads):
+        return False, (
+            f"{env_reads[0]} treats .env as a directory; it is a file, so this matches "
+            "nothing and no longer covers .env itself"
+        )
+    return True, ""
+
+
+# These assert that a rule protects *something*. They cannot certify that your
+# patterns cover *everything* — `Read(./.env)` alone passes while `.env.local`
+# stays readable. Green is evidence, not proof.
+c.check("corpus writes are denied at the permission layer", denies_corpus_writes)
+c.check("secrets are denied, not merely 'ask'", denies_secret_reads)
 
 c.check(
     "a PreToolUse hook is registered for Write|Edit",
@@ -105,6 +130,7 @@ c.check(
         "no PreToolUse entry with matcher 'Write|Edit'",
     ),
 )
+
 
 # --- The subagent is defined and read-only -----------------------------------
 def critic_is_read_only() -> tuple[bool, str]:

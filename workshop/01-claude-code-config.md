@@ -188,6 +188,23 @@ Note what's happening: the corpus is readable but **denied for writes at the per
 layer**, and separately protected by a hook in step 3. That redundancy is deliberate —
 you'll see why in the drill.
 
+Two details in the `deny` list are worth more than they look.
+
+**`.env` is a file, not a directory.** Your own `.gitignore` makes the distinction —
+`.venv/` has a trailing slash, `.env` doesn't. So `Read(./.env/**)` would match paths
+inside a directory that doesn't exist *and stop matching the file itself*: a rule that
+reads as protection and enforces nothing. The verifier now rejects that specific mistake,
+because it is an easy one to make and impossible to notice.
+
+**Two `.env` rules, because the gap is siblings, not nesting.** Real projects accumulate
+`.env.local`, `.env.production`, `.env.development` — separate files in the same
+directory. `Read(./.env)` catches one of them. `Read(./.env.*)` is a literal dot then
+anything, deliberately narrower than `.env*`, which would also swallow `.envrc`.
+
+The general lesson, and it outlives this config: a `deny` rule protects exactly what its
+*pattern* matches. Getting the mechanism right and the pattern wrong buys you the
+confidence of enforcement with the coverage of nothing.
+
 ### Step 3 — A `PreToolUse` hook that protects the corpus
 
 Hooks can be any executable. This project is Python, so write the hook in Python rather
@@ -370,7 +387,8 @@ What it checks, and why these and not others:
 |---|---|
 | Files exist | Cheap, catches typos in paths |
 | `settings.json` parses | A malformed settings file fails *silently* — Claude Code just runs without it |
-| A `deny` rule covers `corpus/` and `.env` | Asserts the security boundary is a rule, not a `CLAUDE.md` sentence |
+| A **`Write`** `deny` rule covers `corpus/` | Asserts the boundary is a rule, not a `CLAUDE.md` sentence — and that it stops *writes*. A `Read` deny on `corpus/` inverts the intent and used to pass |
+| A **`Read`** `deny` rule covers `.env`, and doesn't treat it as a directory | `Read(./.env/**)` matches paths inside a directory that doesn't exist, and stops covering the file. It reads as protection and enforces nothing |
 | `PreToolUse` matcher is `Write\|Edit` | Catches the classic wrong-matcher bug |
 | `question-critic` exists and has no `Write`/`Edit`/`Bash` | A critic that can edit its own subject isn't a critic |
 | **The hook denies a corpus write** | Executes your hook with synthetic stdin and asserts the decision |

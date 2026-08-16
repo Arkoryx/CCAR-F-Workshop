@@ -189,7 +189,6 @@ def live_cache_hit() -> tuple[bool, str]:
         return False, "ANTHROPIC_API_KEY is not set"
 
     import anthropic
-
     from coach.cached_client import ask
 
     corpus = (PROJECT / "corpus" / "exam-blueprint.md").read_text(encoding="utf-8")

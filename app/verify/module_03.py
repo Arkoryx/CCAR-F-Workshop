@@ -123,7 +123,10 @@ def recording_round_trips() -> tuple[bool, str]:
     if not ranked:
         return False, "no domains scored after recording"
     worst = ranked[0][0]
-    return worst == "prompt_engineering", f"weakest domain should be prompt_engineering, got {worst}"
+    return (
+        worst == "prompt_engineering",
+        f"weakest domain should be prompt_engineering, got {worst}",
+    )
 
 
 c.check("results record and rank weakest-first", recording_round_trips)

@@ -30,7 +30,9 @@ for rel in ("coach/guardrails.py", "coach/agent.py", "tests/test_guardrails.py")
 def corpus_paths_detected() -> tuple[bool, str]:
     from coach.guardrails import is_in_corpus
 
-    missed = [p for p in ("corpus/exam-blueprint.md", "coach/../corpus/x.md") if not is_in_corpus(p)]
+    missed = [
+        p for p in ("corpus/exam-blueprint.md", "coach/../corpus/x.md") if not is_in_corpus(p)
+    ]
     return not missed, f"failed to classify as corpus: {missed}"
 
 

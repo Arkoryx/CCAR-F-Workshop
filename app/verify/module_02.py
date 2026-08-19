@@ -129,7 +129,9 @@ def prompt_uses_delimiters() -> tuple[bool, str]:
 
     rendered = user_prompt("agentic_architecture", 3, "# A heading that could confuse things")
     tagged = re.search(r"<\w+>.*</\w+>", rendered, re.DOTALL)
-    return bool(tagged), "interpolated corpus is not delimited — markdown in it can bleed into instructions"
+    return bool(
+        tagged
+    ), "interpolated corpus is not delimited — markdown in it can bleed into instructions"
 
 
 c.check("user prompt delimits interpolated corpus", prompt_uses_delimiters)

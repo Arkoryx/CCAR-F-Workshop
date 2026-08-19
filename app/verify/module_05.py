@@ -47,7 +47,7 @@ def prefix_is_byte_stable() -> tuple[bool, str]:
     if a != b:
         for i, (x, y) in enumerate(zip(a, b)):
             if x != y:
-                return False, f"prefix diverges at char {i}: {a[max(0,i-40):i+40]!r}"
+                return False, f"prefix diverges at char {i}: {a[max(0, i - 40) : i + 40]!r}"
         return False, f"prefix length differs: {len(a)} vs {len(b)}"
     return True, ""
 
@@ -66,7 +66,7 @@ def breakpoint_is_on_the_last_stable_block() -> tuple[bool, str]:
     if len(marked) > 4:
         return False, f"{len(marked)} breakpoints; the API allows at most 4"
     return marked[-1] == len(blocks) - 1, (
-        f"breakpoint at block {marked[-1]} of {len(blocks)-1} — content after it is uncached"
+        f"breakpoint at block {marked[-1]} of {len(blocks) - 1} — content after it is uncached"
     )
 
 
@@ -141,7 +141,9 @@ def savings_are_reported() -> tuple[bool, str]:
     from coach.cached_client import Usage
     from coach.ledger import savings_vs_uncached
 
-    saved = savings_vs_uncached(Usage(uncached_input=0, cache_write=0, cache_read=1_000_000, output=0))
+    saved = savings_vs_uncached(
+        Usage(uncached_input=0, cache_write=0, cache_read=1_000_000, output=0)
+    )
     return saved > 0, f"expected positive savings, got {saved}"
 
 

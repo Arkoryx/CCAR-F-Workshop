@@ -42,9 +42,11 @@
     "4": {
       "title": "A PostToolUse hook that formats on save",
       "labels": [
-        "a PreToolUse hook is registered for Write|Edit"
+        "a PreToolUse hook is registered for Write|Edit",
+        "a PostToolUse hook is registered for Write|Edit",
+        "the PreToolUse command names a hook script that exists"
       ],
-      "note": "Only the PreToolUse registration is asserted. A missing or wrong PostToolUse block will not fail anything here."
+      "limit": "Registration and script existence only. Neither hook has ever been fired by a real Claude Code session \u2014 that cannot be asserted offline."
     },
     "5": {
       "title": "A subagent",

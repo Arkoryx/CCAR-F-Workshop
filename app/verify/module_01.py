@@ -10,6 +10,7 @@ see what happens" into something that either passes or fails, every time.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -120,16 +121,61 @@ def denies_secret_reads() -> tuple[bool, str]:
 c.check("corpus writes are denied at the permission layer", denies_corpus_writes)
 c.check("secrets are denied, not merely 'ask'", denies_secret_reads)
 
-c.check(
-    "a PreToolUse hook is registered for Write|Edit",
-    lambda: (
-        any(
-            entry.get("matcher") == "Write|Edit"
-            for entry in load_settings().get("hooks", {}).get("PreToolUse", [])
-        ),
-        "no PreToolUse entry with matcher 'Write|Edit'",
-    ),
-)
+
+def matcher_groups(event: str) -> tuple[list, str]:
+    """hooks.<event> is a LIST of matcher groups, not a single group.
+
+    Collapsing the list to one object is an easy mistake when you only have one
+    matcher, and iterating a dict in Python yields its keys, so the failure
+    surfaces as an unhelpful AttributeError on a string. Name it instead.
+    """
+    groups = load_settings().get("hooks", {}).get(event, [])
+    if isinstance(groups, dict):
+        return [], (
+            f"hooks.{event} is a single object; it must be a list of matcher groups: "
+            f'"{event}": [ {{ "matcher": ..., "hooks": [...] }} ]'
+        )
+    if not isinstance(groups, list):
+        return [], f"hooks.{event} must be a list, got {type(groups).__name__}"
+    return groups, ""
+
+
+def registered_for(event: str):
+    def _check() -> tuple[bool, str]:
+        groups, err = matcher_groups(event)
+        if err:
+            return False, err
+        found = any(g.get("matcher") == "Write|Edit" for g in groups)
+        return found, f"no {event} entry with matcher 'Write|Edit'"
+
+    return _check
+
+
+def pre_tool_use_command_resolves() -> tuple[bool, str]:
+    """A registration that names a script which does not exist enforces nothing.
+
+    Only the basename is checked, against .claude/hooks/. That catches a typo or
+    a missing file; it does not prove the directory in the command is right.
+    """
+    groups, err = matcher_groups("PreToolUse")
+    if err:
+        return False, err
+    seen: list[str] = []
+    for group in groups:
+        for hook in group.get("hooks", []):
+            command = hook.get("command", "")
+            for name in re.findall(r"[\w.-]+\.py", command):
+                seen.append(name)
+                if (PROJECT / ".claude" / "hooks" / name).exists():
+                    return True, ""
+    return False, (
+        f"no PreToolUse command names a script in .claude/hooks/ — saw {seen or 'no .py file'}"
+    )
+
+
+c.check("a PreToolUse hook is registered for Write|Edit", registered_for("PreToolUse"))
+c.check("a PostToolUse hook is registered for Write|Edit", registered_for("PostToolUse"))
+c.check("the PreToolUse command names a hook script that exists", pre_tool_use_command_resolves)
 
 
 # --- The subagent is defined and read-only -----------------------------------

@@ -169,7 +169,7 @@ assembled, because you and it share blind spots.
 
 All seven modules (00–06) written, each with an executable verifier in `app/verify/`.
 A full reference implementation lives on the `solutions` branch, and **all six verifiers
-pass against it** (17/17, 12/12, 13/13, 13/13, 13/13, 13/13), along with `pytest` and
+pass against it** (19/19, 12/12, 13/13, 13/13, 13/13, 13/13), along with `pytest` and
 `ruff`. Every build step in these modules has been executed, not just written.
 
 **What is not yet verified — read this before trusting a module end to end:**
@@ -179,6 +179,7 @@ pass against it** (17/17, 12/12, 13/13, 13/13, 13/13, 13/13), along with `pytest
 | ~~**Drill answer keys**~~ — **audited**, all 50 checked against primary sources | Found 2 wrong/broken questions and 3 over-claiming explanations, all fixed. Also surfaced a live bug in module 04's build code. Details below. |
 | **Every `--live` check** — no API call has ever been made | Module 05's whole claim (caching works) rests on `cache_read_input_tokens > 0`, which only a live run can show. The offline checks prove the code is *shaped* right, not that it *works*. |
 | **The MCP server has never been started** | Module 03's checkpoint says "one server, both consumers." The logic is tested; the stdio transport and Claude Code's connection to it are not. |
+| **No hook has ever fired in a live session** | Module 01's checks execute the hook script directly with a synthetic payload, and assert the registration parses. Nothing proves Claude Code loads `app/.claude/settings.json` and invokes the hook on a real `Write`. |
 | **The agent has never run a batch** | Module 04's guardrails are tested directly; the loop they guard has not executed. |
 | **Blueprint weightings** | Third-party sources, not Anthropic. See the caveat in `references/exam-blueprint.md`. |
 

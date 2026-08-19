@@ -389,7 +389,8 @@ What it checks, and why these and not others:
 | `settings.json` parses | A malformed settings file fails *silently* — Claude Code just runs without it |
 | A **`Write`** `deny` rule covers `corpus/` | Asserts the boundary is a rule, not a `CLAUDE.md` sentence — and that it stops *writes*. A `Read` deny on `corpus/` inverts the intent and used to pass |
 | A **`Read`** `deny` rule covers `.env`, and doesn't treat it as a directory | `Read(./.env/**)` matches paths inside a directory that doesn't exist, and stops covering the file. It reads as protection and enforces nothing |
-| `PreToolUse` matcher is `Write\|Edit` | Catches the classic wrong-matcher bug |
+| `PreToolUse` **and** `PostToolUse` matchers are `Write\|Edit` | Catches the classic wrong-matcher bug, and that `hooks.<event>` is a *list* of matcher groups — collapsing it to one object is easy and fails with an unhelpful error |
+| The `PreToolUse` command names a script that exists | A registration pointing at a missing file enforces nothing. Basename only — it does not prove the directory is right |
 | `question-critic` exists and has no `Write`/`Edit`/`Bash` | A critic that can edit its own subject isn't a critic |
 | **The hook denies a corpus write** | Executes your hook with synthetic stdin and asserts the decision |
 | **The hook allows a `coach/` write** | Guards against a hook that denies everything and looks like it works |

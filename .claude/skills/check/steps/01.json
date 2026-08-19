@@ -44,7 +44,8 @@
       "labels": [
         "a PreToolUse hook is registered for Write|Edit",
         "a PostToolUse hook is registered for Write|Edit",
-        "the PreToolUse command names a hook script that exists"
+        "the PreToolUse command names a hook script that exists",
+        "hook commands quote ${CLAUDE_PROJECT_DIR}"
       ],
       "limit": "Registration and script existence only. Neither hook has ever been fired by a real Claude Code session \u2014 that cannot be asserted offline."
     },

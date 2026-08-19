@@ -178,6 +178,39 @@ c.check("a PostToolUse hook is registered for Write|Edit", registered_for("PostT
 c.check("the PreToolUse command names a hook script that exists", pre_tool_use_command_resolves)
 
 
+def hook_commands_quote_project_dir() -> tuple[bool, str]:
+    """An unquoted ${CLAUDE_PROJECT_DIR} breaks as soon as the path contains a space.
+
+    The shell splits arguments on whitespace before the program sees them, so the
+    command runs with a truncated path, the hook exits non-zero, and a non-zero exit
+    is a *non-blocking* error — the tool call proceeds. The hook is registered,
+    visible in /hooks, and enforcing nothing.
+
+    Only asserted when this project's own path contains a space. Elsewhere the
+    quoting is good practice but changes no behaviour, and a checkpoint should fail
+    on broken configs rather than on style.
+    """
+    if " " not in str(PROJECT):
+        return True, ""
+    offenders = []
+    for event, groups in load_settings().get("hooks", {}).items():
+        if not isinstance(groups, list):
+            continue
+        for group in groups:
+            for hook in group.get("hooks", []):
+                command = hook.get("command", "")
+                outside_quotes = re.sub(r'"[^"]*"', "", command)
+                if "${CLAUDE_PROJECT_DIR}" in outside_quotes:
+                    offenders.append(f"{event}: {command}")
+    return not offenders, (
+        f"unquoted ${{CLAUDE_PROJECT_DIR}} in {offenders}. This project's path contains a "
+        "space, so the command splits and the hook dies with a non-blocking error"
+    )
+
+
+c.check("hook commands quote ${CLAUDE_PROJECT_DIR}", hook_commands_quote_project_dir)
+
+
 # --- The subagent is defined and read-only -----------------------------------
 def critic_is_read_only() -> tuple[bool, str]:
     text = (PROJECT / ".claude" / "agents" / "question-critic.md").read_text(encoding="utf-8")

@@ -264,7 +264,7 @@ keys: `$schema`, `permissions`, `hooks`.
         "hooks": [
           {
             "type": "command",
-            "command": "python ${CLAUDE_PROJECT_DIR}/.claude/hooks/protect_corpus.py",
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/protect_corpus.py\"",
             "statusMessage": "Checking corpus protection..."
           }
         ]
@@ -276,7 +276,7 @@ keys: `$schema`, `permissions`, `hooks`.
         "hooks": [
           {
             "type": "command",
-            "command": "ruff format ${CLAUDE_PROJECT_DIR}",
+            "command": "ruff format \"${CLAUDE_PROJECT_DIR}\"",
             "timeout": 30
           }
         ]
@@ -288,6 +288,42 @@ keys: `$schema`, `permissions`, `hooks`.
 
 `Write|Edit` is an exact-string matcher listing two tools — not a regex, because it
 contains only letters and a pipe.
+
+### Two ways a correct hook silently does nothing
+
+**Quote the path.** `${CLAUDE_PROJECT_DIR}` expands to a real directory, and real
+directories contain spaces — `C:\Users\Jane Smith\...`, `~/Library/Application Support/...`.
+The shell splits arguments on whitespace before the program sees them, so an unquoted path
+arrives as several fragments:
+
+```
+PreToolUse:Write hook error
+Failed with non-blocking status code:
+  python.exe: can't find '__main__' module in 'C:\Users\Jane'
+```
+
+Note **non-blocking**. The hook crashed, so it returned no decision, so **the write went
+through**. Corpus protection registered, visible in `/hooks`, and completely inert. Both
+commands above are quoted for exactly this reason.
+
+**Hooks inherit the environment of the Claude Code process, not your shell's.** Launch
+`claude` from a terminal where the virtualenv isn't active and the hook's `python` resolves
+to the system interpreter, while `ruff` isn't on `PATH` at all:
+
+```
+PostToolUse:Write hook error
+Failed with non-blocking status code: bash: line 1: ruff: command not found
+```
+
+Activate the venv *before* launching `claude`. The corpus hook survives an inactive venv
+only because it imports nothing but `json`, `sys`, and `pathlib` — keep it that way, and
+keep any hook that guards something dependency-free.
+
+> **Neither failure produces a red checkpoint.** The verifier executes your hook directly
+> with a synthetic payload, which proves the *script* is correct and says nothing about
+> whether Claude Code can invoke it. The only test for that is a real corpus write in a
+> session rooted at `app/` — do it once at the end of this module, and watch for your own
+> `permissionDecisionReason` coming back.
 
 ### Step 5 — A subagent
 

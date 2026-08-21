@@ -207,6 +207,7 @@ line-length = 100
 # releases, so an unpinned config means `pip install ruff` in CI can turn a
 # green build red without anyone touching the code.
 select = ["E4", "E7", "E9", "F", "I"]
+
 [tool.pytest.ini_options]
 # Put app/ on sys.path so `pytest` finds the `coach` package.
 # The `pytest` console script does not add the current directory to sys.path —

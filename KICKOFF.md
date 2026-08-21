@@ -28,6 +28,10 @@ Two project skills drive it. Use them rather than walking the module markdown yo
   thing that records progress. `/check 01.2` grades one step, `/check 01` runs the whole
   module checkpoint. Call it as often as I like.
 
+- **`/drill`** — sits the module's ten exam-format questions once the build is done. All ten
+  answered before any verdict, then walked one at a time. `/drill 01 --missed` re-drills
+  only what I got wrong.
+
 If I ask you to just walk me through a module without the skills, that's fine — but the
 skills are the intended path, and `/teach` is where the teaching rules live.
 

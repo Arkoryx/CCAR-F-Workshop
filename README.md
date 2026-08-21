@@ -82,6 +82,8 @@ skill that makes you attempt each piece **before** showing you the answer:
 | `/teach 01.4` | Open a specific step. Invoke **once per step** — sub-steps happen in conversation after that. |
 | `/check 01.2` | Grade one step against the module's real verifier checks. Call it as often as you like. |
 | `/check 01` | Run the whole module checkpoint. |
+| `/drill 01` | Sit the module's ten drill questions. All ten answered before any verdict, then walked one at a time. |
+| `/drill 01 --missed` | Re-drill only the questions you got wrong last time. |
 
 **`/teach` never decides you're done and never writes progress — `/check` does.** That
 split is deliberate: if the thing that taught you a step also graded it, your progress
@@ -89,7 +91,13 @@ would rest on a judgement about the conversation instead of on an executable ass
 It's the same reason the verifiers assert end state rather than transcript.
 
 `/check` records to a gitignored `.teach-progress.json`, and **only on a genuine pass**.
-Unearned state is worse than no state.
+Unearned state is worse than no state. `/drill` keeps its own gitignored
+`.drill-results.json`, which is what makes `--missed` possible — re-drilling your own
+errors is the highest-value thing here for an exam.
+
+`/drill` also validates a drill against itself before running it: ten questions against ten
+key entries, and every `(Select N)` marker against the arity of its key. That check found a
+real defect in module 04 the first time it was run.
 
 The honest limit: these checks assert *state, not understanding*. `CLAUDE.md exists`
 passes whether you derived the file or pasted it. `/check` says so when a step passes on

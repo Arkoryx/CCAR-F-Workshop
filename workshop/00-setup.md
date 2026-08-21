@@ -7,10 +7,11 @@ Time: 30–45 minutes.
 
 > **Run this workshop with `/teach`.** From module 01 on, the build steps are delivered by
 > a project skill that walks each step in pieces and makes you attempt them before showing
-> you anything — `/teach 01.1` to open a step, `/check 01.1` to have it graded. Module 00
-> is the exception: nothing here is derivable, so `/teach 00` is a guided checklist and
-> `/check 00` runs the checkpoint below. **On a fresh clone, restart Claude Code once**
-> before the skills appear; a top-level `.claude/skills/` that didn't exist at session
+> you anything — `/teach 01.1` to open a step and `/check 01.1` to have it graded. Once a
+> module's build is done, `/drill 01` sits its ten exam questions. Module 00 is the
+> exception: nothing here is derivable, so `/teach 00` is a guided checklist, `/check 00`
+> runs the checkpoint below, and there is no drill. **On a fresh clone, restart Claude
+> Code once** before the skills appear; a top-level `.claude/skills/` that didn't exist at session
 > start isn't picked up until then.
 
 ---

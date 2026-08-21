@@ -207,7 +207,22 @@ line-length = 100
 # releases, so an unpinned config means `pip install ruff` in CI can turn a
 # green build red without anyone touching the code.
 select = ["E4", "E7", "E9", "F", "I"]
+[tool.pytest.ini_options]
+# Put app/ on sys.path so `pytest` finds the `coach` package.
+# The `pytest` console script does not add the current directory to sys.path —
+# `python -m pytest` does — and pytest itself inserts the test file's nearest
+# non-package ancestor (tests/), not the project root. Without this, `pytest -q`
+# fails with ModuleNotFoundError while CI passes, because CI runs
+# `pip install -e .` first. Same command, same result, both places.
+pythonpath = ["."]
 ```
+
+The `pythonpath` line is there for a reason you will hit in module 01. `pytest` run as a
+console script does **not** put the current directory on `sys.path`; `python -m pytest`
+does. Pytest then inserts the test file's nearest non-package ancestor — `tests/` — rather
+than the project root. So without this setting, `pytest -q` fails to import `coach` while
+CI passes, because CI installs the package first. One line here keeps the local command and
+the CI command honest about each other.
 
 That `select` line is not boilerplate. Module 01 has you write a CI workflow that runs
 `ruff check .`, and module 01's `PostToolUse` hook runs `ruff format` on every save — so

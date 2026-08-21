@@ -11,3 +11,12 @@ line-length = 100
 # releases, so an unpinned config means `pip install ruff` in CI can turn a
 # green build red without anyone touching the code.
 select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.pytest.ini_options]
+# Put app/ on sys.path so `pytest` finds the `coach` package.
+# The `pytest` console script does not add the current directory to sys.path —
+# `python -m pytest` does — and pytest itself inserts the test file's nearest
+# non-package ancestor (tests/), not the project root. Without this, `pytest -q`
+# fails with ModuleNotFoundError while CI passes, because CI runs
+# `pip install -e .` first. Same command, same result, both places.
+pythonpath = ["."]

@@ -384,7 +384,48 @@ def test_imports():
     import coach  # noqa: F401
 ```
 
-And `app/coach/__init__.py` (empty file).
+And `app/coach/__init__.py` (empty file). That one does more than it looks: until now
+`coach/` has been a PEP 420 *namespace* package, which is why `import coach` succeeds while
+`import coach.schema` raises `ModuleNotFoundError`. Adding the file makes it a real
+package, and that is exactly what `test_imports` asserts.
+
+### Why the workflow lives in `app/`, and why it will not run
+
+GitHub Actions reads workflows from `.github/workflows/` **at the repository root**. This
+one is a level down, so inside the workshop repo GitHub never sees it — and the workshop
+repo has no remote anyway. The file is a correct artifact that is currently dormant.
+
+That is deliberate, for the same reason `app/.claude/settings.json` sits where it does:
+**`app/` is the Coach's project root, and the workshop repo is the workspace you build it
+in.** Extract `app/` into its own repository and both the settings and this workflow land
+exactly where they belong. Until then, `app/` is a subdirectory and neither tool looks
+inside it.
+
+Moving the workflow to the repo root is not a one-line change, and it is worth knowing why
+before you try it:
+
+- Every `run` step assumes the working directory is `app/`. `pip install -e .` needs
+  `pyproject.toml` in the current directory; the repo root has none. You would need a
+  job-level `defaults.run.working-directory: app`.
+- This module's verifier resolves paths against `app/` (see `PROJECT` in
+  `verify/_harness.py`), so it asserts `app/.github/workflows/ci.yml`. Move the file and
+  the checkpoint fails.
+- A root `.github/` belongs to neither column of the ownership table in
+  [`00-setup.md`](00-setup.md) §5, so it is the one path that could actually produce a
+  merge conflict between your branch and `main`.
+
+**What is enforcing anything during the workshop, then?** Two things, and neither is CI:
+the `PostToolUse` hook from step 4, which runs on every write, and this command, which you
+run by hand from `app/`:
+
+```bash
+ruff check . && pytest -q
+```
+
+The lesson is the one this module keeps returning to. You now have the same checks wired
+at three points — a hook on every save, a verifier you invoke, and a CI job on every push —
+escalating in cost and in how hard they are to skip. Writing the third one is the Domain 2
+task statement; noticing that it is not currently running is the part that matters.
 
 ---
 

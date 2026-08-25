@@ -1,0 +1,55 @@
+{
+  "module": "02",
+  "title": "Prompt Engineering & Structured Output",
+  "mode": "verifier",
+  "run_from": "app",
+  "command": "python verify/module_02.py",
+  "note": "Labels must match app/verify/module_02.py exactly. Twelve checks run offline; a thirteenth runs only under --live and is deliberately unmapped, so /check never spends money. If the verifier gains a check, this file is stale and /check will under-report.",
+  "prerequisites": {
+    "from_module": "01",
+    "labels": [
+      "coach/__init__.py exists"
+    ],
+    "note": "Module 02 imports `coach.schema`, `coach.prompts`, and `coach.generate`. Module 01 step 6 created the package and the pythonpath entry that makes those imports resolve; without them every check in this module fails on import, not on content."
+  },
+  "steps": {
+    "1": {
+      "title": "The schema",
+      "labels": [
+        "coach/schema.py exists",
+        "five domains, weights sum to 1.0"
+      ],
+      "limit": "Thin, and deliberately so. This asserts the file imports, that Domain has five members, and that WEIGHTS sums to 1.0. It says nothing about Choice, Question, QuestionBatch, or any validator you wrote — those are exercised for the first time in step 4, against the fixtures. A step-1 pass here is compatible with every cross-field validator being dead code.",
+      "self_check": "Before moving on, confirm your validators are registered rather than merely written. An unapplied decorator — `model_validator(mode=\"after\")` without its `@` — is a silent no-op that neither Python nor ruff reports: `python -c \"import sys; sys.path.insert(0,'.'); from coach.schema import Question; print(list(Question.__pydantic_decorators__.model_validators) or 'NONE REGISTERED')\"`"
+    },
+    "2": {
+      "title": "The prompt",
+      "labels": [
+        "coach/prompts.py exists",
+        "system prompt is substantive",
+        "system prompt has no cache invalidators",
+        "user prompt delimits interpolated corpus"
+      ],
+      "limit": "Two of these are length and pattern heuristics. `system prompt is substantive` only asserts more than 300 characters, and `no cache invalidators` greps the module-level prefix for datetime.now, time.time, uuid4, random. and os.urandom — a volatile value introduced some other way passes. Neither says the prompt produces good questions. That judgement is the actual work of this module and no check can make it for you."
+    },
+    "3": {
+      "title": "The generator",
+      "labels": [
+        "coach/generate.py exists",
+        "coach.generate imports without side effects"
+      ],
+      "limit": "Asserts that importing the module does not construct a client or make a request, and that MODEL names a claude-* id. It does not call the API. Whether generation actually works is only answered by `python verify/module_02.py --live` or by running `python -m coach.generate`, both of which spend money and neither of which /check will run for you."
+    },
+    "4": {
+      "title": "Golden fixtures",
+      "labels": [
+        "tests/fixtures/valid_question.json exists",
+        "tests/test_schema.py exists",
+        "the golden fixture parses",
+        "broken questions are rejected"
+      ],
+      "note": "The two behavioural checks belong to this step because they need this step's fixture file, but what they exercise is step 1's code. `broken questions are rejected` mutates the golden payload five ways — empty correct_labels, a label naming a missing choice, every choice marked correct, only three choices, a duplicate choice label — and fails if the schema accepts any of them. This is where a validator you never registered finally shows up.",
+      "limit": "The five mutations are the ones the verifier thought of. A validator can pass all five and still be wrong in a sixth way; `tests/test_schema.py` is checked for existence only, never read or run. Run `pytest -q` yourself."
+    }
+  }
+}

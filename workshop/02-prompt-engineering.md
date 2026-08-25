@@ -75,13 +75,27 @@ Supported: basic types, `enum`, `const`, `anyOf`, `allOf`, `$ref`/`$def`, string
 `format` values, and `additionalProperties: false` (**required** on every object).
 
 **Not supported:** recursive schemas, numeric constraints (`minimum`, `maximum`,
-`multipleOf`), string length constraints (`minLength`, `maxLength`), complex array
-constraints.
+`multipleOf`), string length constraints (`minLength`, `maxLength`), most array
+constraints. One narrow exception: `minItems` survives when its value is `0` or `1`.
 
-So a schema saying "exactly 4 choices" **cannot be enforced by the API.** The Python and
-TypeScript SDKs strip unsupported constraints before sending and validate them
-client-side. That means: your Pydantic validators still run, but they run on *your*
-machine after the response arrives — they don't constrain generation.
+So a schema saying "exactly 4 choices" **cannot be enforced by the API.**
+
+**They are not stripped, though, and the difference matters.** The SDK moves every
+unsupported keyword into that field's `description` — creating one if the field had none
+— so the model *might* follow it. Verified against `anthropic` 0.122.0, whose own comment
+in `anthropic/lib/_parse/_transform.py` says exactly that: *"if there are any props
+leftover then they aren't supported, so we add them to the description so that the model
+*might* follow them."*
+
+| You write | What is actually sent |
+|---|---|
+| `Field(min_length=20)` on a `str` | `{"type": "string", "description": "{minLength: 20}"}` |
+| `Field(min_length=1)` on a `list` | `{"type": "array", "minItems": 1}` — a real constraint |
+| `Field(min_length=4)` on a `list` | `{"type": "array", "description": "{minItems: 4}"}` |
+
+That is a worse failure mode than stripping, and a more useful one to understand: the
+constraint does not vanish, it **changes category** — from enforced to suggested. Your
+Pydantic validators still run, but on *your* machine after the response arrives.
 
 Practical consequence for this module: constrain what you can in the schema (enums for
 domain, required fields), and validate the rest in Python, with a retry when it fails.
@@ -415,7 +429,7 @@ D. `stop_sequences=["}"]`
 
 A. The API enforces it during generation
 B. The API returns 400 for an unsupported keyword
-C. Python/TypeScript SDKs strip it before sending and validate client-side
+C. The SDK moves it into the field's `description`, and validates it client-side
 D. It is passed through and silently ignored by everything
 
 **4.** Which is **required** on every object in a structured-output schema?
@@ -471,9 +485,16 @@ are still fine — only the trailing one is a prefill.
 API-wide (note: `messages.parse()` still accepts `output_format=` as an SDK convenience —
 that's the helper, not the wire parameter).
 
-**3 — C.** String and numeric constraints aren't in the supported subset. The Python and
-TypeScript SDKs strip them and validate client-side. The practical takeaway: those
-constraints don't shape generation, they only reject afterwards.
+**3 — C.** String and numeric constraints aren't in the supported subset, but the SDK does
+not drop them: it appends each one to that field's `description` (creating one if the
+field had none) so the model may still follow it, then your Pydantic validators reject
+client-side once the response arrives. D is wrong on the second half — the keyword *is*
+passed through, but not ignored by everything.
+
+Verified against `anthropic` 0.122.0; the transform lives in
+`anthropic/lib/_parse/_transform.py`. A key pinned to a moving SDK needs a version, so
+that is the version this one was checked against. The practical takeaway is unchanged:
+`minLength` is a hint, not a guarantee.
 
 **4 — A.** `additionalProperties: false` is required on all objects.
 

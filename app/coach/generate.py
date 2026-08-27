@@ -14,13 +14,43 @@ from coach.schema import Domain, QuestionBatch
 MODEL = "claude-opus-5"
 CORPUS = Path(__file__).resolve().parents[1] / "corpus"
 
+# Which corpus documents belong to which domain. Explicit rather than derived
+# from the enum's declaration order — that order matches the blueprint today,
+# and nothing would tell you the day it stopped.
+DOMAIN_PREFIX: dict[Domain, str] = {
+    Domain.AGENTIC: "d1",
+    Domain.CLAUDE_CODE: "d2",
+    Domain.PROMPTING: "d3",
+    Domain.TOOLS_MCP: "d4",
+    Domain.CONTEXT: "d5",
+}
 
-def load_corpus(limit_chars: int = 20_000) -> str:
-    docs = sorted(CORPUS.glob("*.md"))
+# Framing material: what the domains are and how the exam weights them. Small,
+# and relevant to every request, so it is exempt from the domain filter.
+SHARED_DOC = "exam-blueprint.md"
+
+
+def load_corpus(domain: Domain, limit_chars: int = 20_000) -> str:
+    """Sample this domain's documents, giving each of them a share of the budget.
+
+    Both halves earn their keep. Without the prefix filter the model is handed
+    some other domain's material and told to ground its questions in it. Without
+    the per-document split, truncating one long concatenation lets whichever file
+    sorts first consume the whole budget while the rest are never sent at all.
+    """
+    shared = CORPUS / SHARED_DOC
+    docs = sorted(CORPUS.glob(f"{DOMAIN_PREFIX[domain]}-*.md"))
     if not docs:
+        # No domain-prefixed documents yet — fall back to whatever else is there.
+        docs = sorted(q for q in CORPUS.glob("*.md") if q != shared)
+    if not docs and not shared.exists():
         raise FileNotFoundError(f"no corpus documents in {CORPUS}")
-    joined = "\n\n---\n\n".join(d.read_text(encoding="utf-8") for d in docs)
-    return joined[:limit_chars]
+
+    parts = [shared.read_text(encoding="utf-8")] if shared.exists() else []
+    budget = max(limit_chars - sum(len(part) for part in parts), 0)
+    per_doc = budget // len(docs) if docs else 0
+    parts += [d.read_text(encoding="utf-8")[:per_doc] for d in docs]
+    return "\n\n---\n\n".join(parts)
 
 
 def generate(domain: Domain, n: int = 5) -> QuestionBatch:
@@ -29,7 +59,9 @@ def generate(domain: Domain, n: int = 5) -> QuestionBatch:
         model=MODEL,
         max_tokens=16000,
         system=GENERATOR_SYSTEM,
-        messages=[{"role": "user", "content": user_prompt(domain.value, n, load_corpus())}],
+        messages=[
+            {"role": "user", "content": user_prompt(domain.value, n, load_corpus(domain))}
+        ],
         output_format=QuestionBatch,
     )
     batch = response.parsed_output

@@ -188,13 +188,18 @@ def generate_imports_without_calling_api() -> tuple[bool, str]:
 
     If it does, every test run and every CI job costs money.
 
+    `main` is required alongside `generate` because the module's own checkpoint is
+    `python -m coach.generate --domain claude_code --n 3`, and that needs an entry
+    point. Without this, a file with no main() passed every check in the module and
+    then failed the command the module tells you to run.
+
     Each condition reports itself. An assertion that ands several tests together
     and prints only one of them sends the reader to inspect a line that is
     already correct — which is worse than no message at all.
     """
     import coach.generate as g
 
-    absent = [name for name in ("MODEL", "generate") if not hasattr(g, name)]
+    absent = [name for name in ("MODEL", "generate", "main") if not hasattr(g, name)]
     if absent:
         return False, f"coach.generate defines no {', '.join(absent)}"
     if not g.MODEL.startswith("claude-"):

@@ -209,6 +209,12 @@ line-length = 100
 # green build red without anyone touching the code.
 select = ["E4", "E7", "E9", "F", "I"]
 
+[tool.ruff.lint.isort]
+# Name the first-party package explicitly. Without this, ruff infers it from what
+# happens to be on disk — so a file lints clean before you create coach/ and fails
+# I001 afterwards, same file, same config.
+known-first-party = ["coach"]
+
 [tool.pytest.ini_options]
 # Put app/ on sys.path so `pytest` finds the `coach` package.
 # The `pytest` console script does not add the current directory to sys.path —
@@ -225,6 +231,13 @@ does. Pytest then inserts the test file's nearest non-package ancestor — `test
 than the project root. So without this setting, `pytest -q` fails to import `coach` while
 CI passes, because CI installs the package first. One line here keeps the local command and
 the CI command honest about each other.
+
+The `known-first-party` line closes the same kind of gap one layer down. Ruff sorts
+imports into stdlib, third-party and first-party groups, and without being told, it decides
+which is which by looking at what exists on disk. So `from coach.schema import Question`
+is third-party before you create `coach/` and first-party after — meaning a file that
+passed `ruff check` yesterday fails today with no edit to it. Naming the package makes the
+answer the same everywhere.
 
 That `select` line is not boilerplate. Module 01 has you write a CI workflow that runs
 `ruff check .`, and module 01's `PostToolUse` hook runs `ruff format` on every save — so

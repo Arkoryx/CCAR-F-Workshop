@@ -64,8 +64,9 @@ def invalid_payloads_rejected() -> tuple[bool, str]:
 
     A validator that only ever sees valid input is untested.
     """
-    from coach.schema import Question
     from pydantic import ValidationError
+
+    from coach.schema import Question
 
     base = json.loads((FIXTURES / "valid_question.json").read_text(encoding="utf-8"))
     mutations = {
@@ -238,6 +239,7 @@ def system_prompt_clears_cache_minimum() -> tuple[bool, str]:
     if not os.environ.get("ANTHROPIC_API_KEY"):
         return False, "ANTHROPIC_API_KEY is not set"
     from anthropic import Anthropic
+
     from coach.generate import MODEL
     from coach.prompts import GENERATOR_SYSTEM
 

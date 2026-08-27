@@ -12,6 +12,14 @@ line-length = 100
 # green build red without anyone touching the code.
 select = ["E4", "E7", "E9", "F", "I"]
 
+[tool.ruff.lint.isort]
+# Name the first-party package explicitly. Without this, ruff infers it from what
+# happens to be on disk — so verify/module_02.py lints clean before you create
+# coach/ and fails I001 afterwards, same file, same config. CI installs the
+# package and a fresh clone does not, which is the same split `pythonpath` above
+# exists to close.
+known-first-party = ["coach"]
+
 [tool.pytest.ini_options]
 # Put app/ on sys.path so `pytest` finds the `coach` package.
 # The `pytest` console script does not add the current directory to sys.path —

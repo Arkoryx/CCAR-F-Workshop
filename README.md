@@ -177,7 +177,7 @@ assembled, because you and it share blind spots.
 
 All seven modules (00–06) written, each with an executable verifier in `app/verify/`.
 A full reference implementation lives on the `solutions` branch, and **all six verifiers
-pass against it** (20/20, 13/13, 13/13, 13/13, 13/13, 13/13), along with `pytest` and
+pass against it** (20/20, 14/14, 13/13, 13/13, 13/13, 13/13), along with `pytest` and
 `ruff`. Every build step in these modules has been executed, not just written.
 
 **What is not yet verified — read this before trusting a module end to end:**
@@ -243,9 +243,16 @@ the machine**. Two defects in module 02:
 | Where | Defect |
 |---|---|
 | 02 concept brief, Q3 option C, **and Q3's key** | All three said the SDKs *strip* unsupported JSON Schema constraints before sending. They don't. `anthropic/lib/_parse/_transform.py` appends each leftover keyword to that field's `description` — creating one if the field had none — "so that the model *might* follow them", in its own comment. Also `minItems` is not uniformly unsupported: values `0` and `1` pass through as real constraints. |
+| 02 step 3 | `load_corpus()` concatenated every corpus document and returned the first 20,000 characters, ignoring the domain it was asked for. `generate(domain, n)` passed `domain` to the prompt and never to the loader, so the instruction said one domain and the material was another — under a system prompt that forbids ungrounded questions. Filtering alone was not the whole fix: one domain is four files and 215,000 characters against a 20,000 budget, so head-truncation still reached 9% of it from a single document. Now filtered by prefix and split per document, with a check. |
 | 02 step 2 | Taught "use XML tags" and stopped. Never said a delimiter must not occur inside the delimited content — and `<instructions>`, `<context>` and `<input>`, the three names Anthropic's prompting guide recommends, all appear *in that guide*, which is a corpus document. Following the docs produced a broken prompt and a green checkpoint. Now taught, and checked. |
 
-The first of those is worse than being wrong: a stripped constraint is gone, whereas a
+Both share a shape with the delimiter defect above: **the starting corpus is small enough
+to hide them.** `exam-blueprint.md` is 2,663 characters, so it fits inside the 20,000-char
+slice whole and contains no XML-like tags. Every one of these bugs is invisible until the
+corpus is real — which is to say, invisible for exactly as long as the workshop is being
+tested rather than used.
+
+The `strip` defect is worse than being wrong: a stripped constraint is gone, whereas a
 demoted one still reads as a guarantee in your source while arriving as a suggestion. The
 lesson is narrower than "verify facts" — it is that **a fact can be checked against a
 document and still be false about the artifact**, and the SDK on disk outranks the prose

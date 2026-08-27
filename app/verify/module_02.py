@@ -196,6 +196,46 @@ def generate_imports_without_calling_api() -> tuple[bool, str]:
 c.check("coach.generate imports without side effects", generate_imports_without_calling_api)
 
 
+def corpus_selection_is_domain_scoped() -> tuple[bool, str]:
+    """Asking for one domain must not hand the model another domain's material.
+
+    Two failures live here and only the first is obvious. A loader that ignores
+    the domain sends whatever sorts first, so the prompt says "prompt_engineering"
+    over agentic-architecture docs. A loader that filters correctly but truncates
+    one long concatenation sends only the first file of the domain, and the rest
+    of the material is never seen — output that looks entirely reasonable and is
+    drawn from a fraction of the sources.
+    """
+    from coach.generate import DOMAIN_PREFIX, load_corpus
+    from coach.schema import Domain
+
+    corpus = PROJECT / "corpus"
+    populated = {d: sorted(corpus.glob(f"{DOMAIN_PREFIX[d]}-*.md")) for d in Domain}
+    populated = {d: docs for d, docs in populated.items() if docs}
+    if len(populated) < 2:
+        # Vacuous: the starting corpus is the blueprint alone, and a filter
+        # cannot be observed until at least two domains have documents.
+        return True, ""
+
+    samples = {d: load_corpus(d) for d in populated}
+    if len(set(samples.values())) != len(samples):
+        return (
+            False,
+            "load_corpus returns identical text for different domains — it is not filtering",
+        )
+
+    for domain, docs in populated.items():
+        absent = [
+            d.name for d in docs if d.read_text(encoding="utf-8")[:200] not in samples[domain]
+        ]
+        if absent:
+            return False, f"{domain.value} never reaches these documents: {absent}"
+    return True, ""
+
+
+c.check("load_corpus selects material for the requested domain", corpus_selection_is_domain_scoped)
+
+
 # --- Live check (opt-in) ------------------------------------------------------
 def live_generation() -> tuple[bool, str]:
     if not os.environ.get("ANTHROPIC_API_KEY"):

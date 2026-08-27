@@ -4,7 +4,7 @@
   "mode": "verifier",
   "run_from": "app",
   "command": "python verify/module_02.py",
-  "note": "Labels must match app/verify/module_02.py exactly. Thirteen checks run offline; two more run only under --live and are deliberately unmapped, so /check never spends money. If the verifier gains a check, this file is stale and /check will under-report.",
+  "note": "Labels must match app/verify/module_02.py exactly. Fourteen checks run offline; two more run only under --live and are deliberately unmapped, so /check never spends money. If the verifier gains a check, this file is stale and /check will under-report.",
   "prerequisites": {
     "from_module": "01",
     "labels": [
@@ -37,9 +37,10 @@
       "title": "The generator",
       "labels": [
         "coach/generate.py exists",
-        "coach.generate imports without side effects"
+        "coach.generate imports without side effects",
+        "load_corpus selects material for the requested domain"
       ],
-      "limit": "Asserts that importing the module does not construct a client or make a request, and that MODEL names a claude-* id. It does not call the API. Whether generation actually works is only answered by `python verify/module_02.py --live` or by running `python -m coach.generate`, both of which spend money and neither of which /check will run for you. Two live checks sit here unmapped: one generation call, and `live: the system prompt clears the model's cache minimum`, which reads MODEL from this step's file and counts GENERATOR_SYSTEM against that model's real floor — 512 tokens on claude-opus-5, 4096 on claude-haiku-4-5. A prompt under the floor never caches, silently."
+      "limit": "Asserts that importing the module does not construct a client or make a request, that MODEL names a claude-* id, and that load_corpus returns different, complete material per domain — the last of which needs at least two domains represented in corpus/ to mean anything, and passes vacuously on the starting corpus. It does not call the API. Whether generation actually works is only answered by `python verify/module_02.py --live` or by running `python -m coach.generate`, both of which spend money and neither of which /check will run for you. Two live checks sit here unmapped: one generation call, and `live: the system prompt clears the model's cache minimum`, which reads MODEL from this step's file and counts GENERATOR_SYSTEM against that model's real floor — 512 tokens on claude-opus-5, 4096 on claude-haiku-4-5. A prompt under the floor never caches, silently."
     },
     "4": {
       "title": "Golden fixtures",

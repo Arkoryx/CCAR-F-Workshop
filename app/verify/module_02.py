@@ -137,6 +137,51 @@ def prompt_uses_delimiters() -> tuple[bool, str]:
 c.check("user prompt delimits interpolated corpus", prompt_uses_delimiters)
 
 
+# Stands in for the corpus excerpt. It carries no tags of its own, so every tag in
+# the rendered prompt is one user_prompt() wrote rather than one that arrived with
+# the material.
+SENTINEL = "CORPUS-EXCERPT-PLACEHOLDER"
+
+
+def delimiter_does_not_collide() -> tuple[bool, str]:
+    """The delimiter must not occur inside the material it delimits.
+
+    The check above asserts a delimiter exists. This one asserts it can work: a
+    tag that also appears in the corpus is not a boundary, because an early
+    closing tag inside the excerpt ends the delimited region and everything after
+    it reads as instruction.
+
+    Not hypothetical. Anthropic's prompting guide recommends <instructions>,
+    <context> and <input> -- and once that guide is in the corpus, all three
+    collide with it.
+    """
+    from coach.prompts import user_prompt
+
+    rendered = user_prompt("prompt_engineering", 3, SENTINEL)
+    tags = sorted(set(re.findall(r"</?(\w+)>", rendered)))
+    if not tags:
+        return False, "no delimiter to check — see 'user prompt delimits interpolated corpus'"
+
+    docs = sorted((PROJECT / "corpus").glob("*.md"))
+    if not docs:
+        # Vacuous, and honestly so: the workshop's starting corpus is the blueprint
+        # alone, which contains no XML-like tags at all.
+        return True, ""
+
+    for doc in docs:
+        text = doc.read_text(encoding="utf-8", errors="replace")
+        for tag in tags:
+            if f"<{tag}>" in text or f"</{tag}>" in text:
+                return False, (
+                    f"delimiter <{tag}> also occurs in corpus/{doc.name} — "
+                    f"an early </{tag}> in the excerpt ends your delimited region"
+                )
+    return True, ""
+
+
+c.check("user prompt delimiter does not collide with the corpus", delimiter_does_not_collide)
+
+
 def generate_imports_without_calling_api() -> tuple[bool, str]:
     """Importing the module must not construct a client or make a request.
 
@@ -164,8 +209,65 @@ def live_generation() -> tuple[bool, str]:
     return q.domain == Domain.CLAUDE_CODE, f"asked for claude_code, got {q.domain}"
 
 
+# Minimum cacheable prefix, per model. Non-monotonic across generations, which is
+# why this cannot be one hardcoded number: module 00 recommends Sonnet or Haiku for
+# bulk generation, and Haiku's minimum is 8x Opus 5's.
+CACHE_MINIMUMS = {
+    "claude-opus-5": 512,
+    "claude-fable-5": 512,
+    "claude-sonnet-5": 1024,
+    "claude-opus-4-8": 1024,
+    "claude-sonnet-4-6": 1024,
+    "claude-opus-4-7": 2048,
+    "claude-haiku-4-5": 4096,
+    "claude-opus-4-6": 4096,
+}
+
+
+def system_prompt_clears_cache_minimum() -> tuple[bool, str]:
+    """A prompt below the minimum never caches -- silently, with no error.
+
+    Live because an accurate count needs the model's own tokenizer. A character
+    estimate is the same class of approximation this module warns about.
+
+    The limit of this check: it asks whether the system prompt *alone* clears the
+    floor. Where the cache_control breakpoint actually goes is module 05's call,
+    and a breakpoint placed after the corpus excerpt makes the prefix far larger.
+    This is a floor on the simplest arrangement, not a verdict on that design.
+    """
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return False, "ANTHROPIC_API_KEY is not set"
+    from anthropic import Anthropic
+    from coach.generate import MODEL
+    from coach.prompts import GENERATOR_SYSTEM
+
+    minimum = CACHE_MINIMUMS.get(MODEL)
+    if minimum is None:
+        # A wrong threshold is worse than no threshold.
+        return True, ""
+
+    client = Anthropic()
+    probe = [{"role": "user", "content": "."}]
+    # The endpoint is stateless, so subtracting a baseline gives the marginal cost
+    # of the system prompt rather than the prompt plus envelope overhead.
+    with_system = client.messages.count_tokens(
+        model=MODEL, system=GENERATOR_SYSTEM, messages=probe
+    ).input_tokens
+    baseline = client.messages.count_tokens(model=MODEL, messages=probe).input_tokens
+    tokens = with_system - baseline
+
+    return tokens >= minimum, (
+        f"GENERATOR_SYSTEM is {tokens} tokens; {MODEL} needs {minimum} to cache at all. "
+        "Below the floor there is no error, just cache_creation_input_tokens: 0."
+    )
+
+
 if LIVE:
     c.check("live: one generation call returns a valid question", live_generation)
+    c.check(
+        "live: the system prompt clears the model's cache minimum",
+        system_prompt_clears_cache_minimum,
+    )
 else:
     print("\n  (skipping live API check — pass --live to include it)")
 

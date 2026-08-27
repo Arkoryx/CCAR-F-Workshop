@@ -250,6 +250,38 @@ Write {n} questions on the {domain_label} domain, grounded in the source materia
 Note the XML tags. They delimit sections unambiguously, which matters when the corpus
 excerpt you interpolate might itself contain markdown headers.
 
+They are not, however, parsed. No XML reader runs over your prompt; the model receives one
+flat sequence of tokens and treats `<source_material>` as a boundary because it has been
+trained to, not because anything enforces it. That distinction — **structure that is
+enforced versus structure that is conventional** — is the testable idea here. Your Pydantic
+schema is enforced: the API constrains generation to it. Your tags are a convention.
+
+Which leads to the rule that actually decides your tag name: **a delimiter has to come from
+an alphabet the delimited content doesn't use.** Same reason you pick a quote character the
+string doesn't contain, or choose a heredoc terminator. Markdown headers fail that test
+immediately — the corpus is markdown, so `## Source material` is written in the very syntax
+it is trying to bound. XML tags pass it, because prose markdown rarely contains them.
+
+Rarely is not never, and the gap is bigger than it looks. Measured against a corpus holding
+the current Claude docs:
+
+```
+<source>        collides    <instructions>  collides
+<document>      collides    <context>       collides
+<documents>     collides    <input>         collides
+```
+
+`<instructions>`, `<context>` and `<input>` are the three tag names Anthropic's own
+prompting guide recommends — and that guide is *in* the corpus, so following its advice
+collides with it. The failure is quiet and total: one `</source>` inside an excerpt closes
+your region early, and every byte after it reads as instruction rather than material.
+
+`verify/module_02.py` checks this, so pick a name distinctive enough to survive. And note
+what the check cannot do for you: for genuinely untrusted input — a document a user
+uploaded rather than a corpus you assembled — the delimiter must be stripped or escaped
+from the content before interpolation. `user_prompt` doesn't do that, because everything in
+`corpus/` is first-party. Change that assumption and the code has to change with it.
+
 ### Step 3 — The generator
 
 `app/coach/generate.py`:

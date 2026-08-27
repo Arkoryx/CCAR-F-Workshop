@@ -4,7 +4,7 @@
   "mode": "verifier",
   "run_from": "app",
   "command": "python verify/module_02.py",
-  "note": "Labels must match app/verify/module_02.py exactly. Twelve checks run offline; a thirteenth runs only under --live and is deliberately unmapped, so /check never spends money. If the verifier gains a check, this file is stale and /check will under-report.",
+  "note": "Labels must match app/verify/module_02.py exactly. Thirteen checks run offline; two more run only under --live and are deliberately unmapped, so /check never spends money. If the verifier gains a check, this file is stale and /check will under-report.",
   "prerequisites": {
     "from_module": "01",
     "labels": [
@@ -28,9 +28,10 @@
         "coach/prompts.py exists",
         "system prompt is substantive",
         "system prompt has no cache invalidators",
-        "user prompt delimits interpolated corpus"
+        "user prompt delimits interpolated corpus",
+        "user prompt delimiter does not collide with the corpus"
       ],
-      "limit": "Two of these are length and pattern heuristics. `system prompt is substantive` only asserts more than 300 characters, and `no cache invalidators` greps the module-level prefix for datetime.now, time.time, uuid4, random. and os.urandom — a volatile value introduced some other way passes. Neither says the prompt produces good questions. That judgement is the actual work of this module and no check can make it for you."
+      "limit": "Two of these are heuristics. `system prompt is substantive` only asserts more than 300 characters, and `no cache invalidators` greps the module-level prefix for datetime.now, time.time, uuid4, random. and os.urandom — a volatile value introduced some other way passes. Neither says the prompt produces good questions; that judgement is the actual work of this module and no check can make it for you. The collision check is exact but conditional: it can only find a collision in a corpus that has one, and the workshop's starting corpus is the blueprint alone, which contains no XML-like tags at all. It is inert until module 03 puts real material in corpus/, and passes vacuously until then."
     },
     "3": {
       "title": "The generator",
@@ -38,7 +39,7 @@
         "coach/generate.py exists",
         "coach.generate imports without side effects"
       ],
-      "limit": "Asserts that importing the module does not construct a client or make a request, and that MODEL names a claude-* id. It does not call the API. Whether generation actually works is only answered by `python verify/module_02.py --live` or by running `python -m coach.generate`, both of which spend money and neither of which /check will run for you."
+      "limit": "Asserts that importing the module does not construct a client or make a request, and that MODEL names a claude-* id. It does not call the API. Whether generation actually works is only answered by `python verify/module_02.py --live` or by running `python -m coach.generate`, both of which spend money and neither of which /check will run for you. Two live checks sit here unmapped: one generation call, and `live: the system prompt clears the model's cache minimum`, which reads MODEL from this step's file and counts GENERATOR_SYSTEM against that model's real floor — 512 tokens on claude-opus-5, 4096 on claude-haiku-4-5. A prompt under the floor never caches, silently."
     },
     "4": {
       "title": "Golden fixtures",

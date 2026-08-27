@@ -177,7 +177,7 @@ assembled, because you and it share blind spots.
 
 All seven modules (00–06) written, each with an executable verifier in `app/verify/`.
 A full reference implementation lives on the `solutions` branch, and **all six verifiers
-pass against it** (20/20, 12/12, 13/13, 13/13, 13/13, 13/13), along with `pytest` and
+pass against it** (20/20, 13/13, 13/13, 13/13, 13/13, 13/13), along with `pytest` and
 `ruff`. Every build step in these modules has been executed, not just written.
 
 **What is not yet verified — read this before trusting a module end to end:**
@@ -230,7 +230,27 @@ table (0 / 2 / other).
 *before* the callback runs. The corpus guardrail never fired. Fixed, plus a new verifier
 check that fails on the old code.
 
-Modules **02 and 05 were clean** — 20/20 between them.
+Module **05 was clean**. Module 02's drills were clean *as drills*, but see below — the
+third pass found a defect in one of its keys that the drill audit's method could not have
+caught, because the key was faithful to the module's prose and the prose was wrong.
+
+### Third pass — checking prose against the installed package
+
+The first audit checked drill answers against sources. The second checked concept briefs
+against drill answers. Neither checked either one against the **code actually installed on
+the machine**. Two defects in module 02:
+
+| Where | Defect |
+|---|---|
+| 02 concept brief, Q3 option C, **and Q3's key** | All three said the SDKs *strip* unsupported JSON Schema constraints before sending. They don't. `anthropic/lib/_parse/_transform.py` appends each leftover keyword to that field's `description` — creating one if the field had none — "so that the model *might* follow them", in its own comment. Also `minItems` is not uniformly unsupported: values `0` and `1` pass through as real constraints. |
+| 02 step 2 | Taught "use XML tags" and stopped. Never said a delimiter must not occur inside the delimited content — and `<instructions>`, `<context>` and `<input>`, the three names Anthropic's prompting guide recommends, all appear *in that guide*, which is a corpus document. Following the docs produced a broken prompt and a green checkpoint. Now taught, and checked. |
+
+The first of those is worse than being wrong: a stripped constraint is gone, whereas a
+demoted one still reads as a guarantee in your source while arriving as a suggestion. The
+lesson is narrower than "verify facts" — it is that **a fact can be checked against a
+document and still be false about the artifact**, and the SDK on disk outranks the prose
+describing it. That key now carries the version it was verified against (`anthropic`
+0.122.0), for the same reason module 01's `defer` key needed one.
 
 The exam blueprint is corroborated by two independent third-party sources but is **not**
 from Anthropic directly — see the caveat in

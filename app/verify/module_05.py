@@ -100,7 +100,11 @@ def cache_hit_detection() -> tuple[bool, str]:
 
     hit = Usage(uncached_input=10, cache_write=0, cache_read=500, output=5)
     miss = Usage(uncached_input=510, cache_write=500, cache_read=0, output=5)
-    return hit.cache_hit and not miss.cache_hit, "cache_hit misreports"
+    if not hit.cache_hit:
+        return False, f"cache_hit is False for a read of {hit.cache_read} cached tokens"
+    if miss.cache_hit:
+        return False, f"cache_hit is True for a write-only turn (cache_read={miss.cache_read})"
+    return True, ""
 
 
 c.check("cache hits are detected from read tokens", cache_hit_detection)

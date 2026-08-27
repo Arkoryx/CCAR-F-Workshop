@@ -187,10 +187,19 @@ def generate_imports_without_calling_api() -> tuple[bool, str]:
     """Importing the module must not construct a client or make a request.
 
     If it does, every test run and every CI job costs money.
+
+    Each condition reports itself. An assertion that ands several tests together
+    and prints only one of them sends the reader to inspect a line that is
+    already correct — which is worse than no message at all.
     """
     import coach.generate as g
 
-    return hasattr(g, "generate") and g.MODEL.startswith("claude-"), f"unexpected MODEL={g.MODEL!r}"
+    absent = [name for name in ("MODEL", "generate") if not hasattr(g, name)]
+    if absent:
+        return False, f"coach.generate defines no {', '.join(absent)}"
+    if not g.MODEL.startswith("claude-"):
+        return False, f"unexpected MODEL={g.MODEL!r}"
+    return True, ""
 
 
 c.check("coach.generate imports without side effects", generate_imports_without_calling_api)

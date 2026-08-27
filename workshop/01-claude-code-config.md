@@ -325,6 +325,46 @@ keep any hook that guards something dependency-free.
 > session rooted at `app/` — do it once at the end of this module, and watch for your own
 > `permissionDecisionReason` coming back.
 
+#### The hook you just wrote writes to the corpus you just protected
+
+Run `ruff --version`. From 0.16 on, `ruff format` formats Python code blocks **inside
+Markdown files** — and `${CLAUDE_PROJECT_DIR}` is `app/`, which contains `corpus/`. So the
+step 4 hook reformats your corpus documents on every save, and the step 3 hook does not
+stop it.
+
+Neither guard is broken. Both are working exactly as written, and neither one covers this:
+
+| Guard | What it actually governs |
+|---|---|
+| `deny: Write(./corpus/**)` | the **Write tool**. Not a shell command. |
+| `protect_corpus.py` on `PreToolUse: Write\|Edit` | tool calls named `Write` or `Edit`. A `Bash` call is neither. |
+
+**Permission rules and hook matchers are scoped to tools, not to paths.** The corpus is
+protected against the model *choosing* to write a file there, which is the threat that
+matters and the one worth building. It is not read-only, and nothing in this module makes
+it read-only. `ruff format` is the polite demonstration; `sed -i`, `echo > corpus/x.md`,
+and `python -c "open(...,'w')"` are the same hole with less pleasant manners, and every one
+of them is a `Bash` call your matcher never sees.
+
+The formatter case itself is benign, and it is worth knowing why before you go and fix it.
+Measured across a 20-file corpus: six files touched, 117 lines of about 10,000, every
+change a line-wrap to fit `line-length`. Prose, headings and provenance headers untouched.
+Blocks it cannot parse are skipped rather than mangled. It is idempotent — the second pass
+is a no-op. Nothing is corrupted; the documents are merely no longer byte-identical to what
+you fetched, which matters only if you plan to re-fetch and diff.
+
+If you do want it closed, the tool-scoped guards cannot do it. The options are a rule
+against the command (`deny: "Bash(sed *)"` and friends — a denylist, so it is only ever as
+complete as your imagination), an `exclude` in the ruff config (fixes this one program and
+no other), or scoping the hook to the file that was just edited, which is better formatter
+behaviour anyway: a save hook has no business rewriting files you did not touch.
+
+**Exam note.** This is the sharp end of *scoping permissions* as a task statement. The
+testable idea is that a `Write(...)` rule and a `Write|Edit` matcher constrain **which tool
+may run**, not **which bytes may change** — so any guard you can describe as "path X is
+read-only" is a guard you have mis-described. Ask what tool the rule names, then ask what
+else can reach the same path.
+
 ### Step 5 — A subagent
 
 Subagents live in `.claude/agents/`. You'll use this one in module 04, but define it now

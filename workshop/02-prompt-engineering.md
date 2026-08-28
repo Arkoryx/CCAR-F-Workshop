@@ -490,7 +490,7 @@ as the default and gate the expensive ones behind a flag.
 Then the real thing:
 
 ```bash
-python -m coach.generate --domain claude_code --n 3
+python -m coach.generate --domain claude_code -n 3
 ```
 
 You should get three questions as JSON. Read them. If they're bad questions — vague,
